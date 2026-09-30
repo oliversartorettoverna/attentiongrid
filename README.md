@@ -72,7 +72,8 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 ## Regole di lavoro
 
 - Un ramo per persona o per funzione (`pela/mappa-rischio`, `oliver/erlang`), poi pull request su `main`. Chi apre la PR scrive in due righe cosa cambia.
-- **Non si committano file grandi.** I dati grezzi (`data/raw/`) restano in locale o nel Drive, cartella "03 Dati". Nel repo vanno solo gli output piccoli di `data/processed/` (sotto 20 MB).
+- **Dati grezzi fuori dal repo.** `data/raw/` resta in locale (e una copia zip nel Drive, cartella "03 Dati").
+- **Output piccoli dentro il repo:** `data/processed/`, `sim/out/giri.json` e `console/data/scenario/` si committano (se sotto 20 MB l'uno), così chiunque apre la demo senza rigenerare niente.
 - Se cambi un formato di file, aggiorna prima `docs/formati-dati.md` e avvisa nel gruppo.
 - Ogni numero inventato o stimato va in `config/` e in `docs/ipotesi.md`, con scritto se è validato o no.
 

@@ -12,12 +12,6 @@ cache/
 *.osm
 *.pbf
 
-# Output rigenerabili pesanti
-sim/out/*
-!sim/out/.gitkeep
-console/data/scenario/*
-!console/data/scenario/.gitkeep
-
 # Sistema
 .DS_Store
 Thumbs.db
