@@ -4,7 +4,7 @@ Progetto per il **Safe Mobility Hack** (Spazio Attivo Roma Casilina, 10–12 ott
 
 **In una frase:** prevediamo quando e dove i veicoli autonomi avranno bisogno di un operatore umano, così un operatore può seguire più veicoli (anche di flotte diverse) senza andare in crisi nei picchi.
 
-Il contesto completo (idea, prove, business model, piano, ruoli) è nel Drive del team, documento **"00 LEGGIMI – Contesto progetto"**. Le indicazioni per ogni persona sono nella cartella **"01 Indicazioni"** del Drive.
+Il contesto completo (idea, prove, business model, piano, ruoli) è nel [Drive del team](https://drive.google.com/drive/folders/1lWvYd15RG1fwRSr5Oq9S2nl_DtjBNuxm), documento [**00 LEGGIMI – Contesto progetto**](https://docs.google.com/document/d/109SlfWPYotK3Y1A98rnCzY4TWpvVRaSBUSONrSjZHgk/edit). Le indicazioni per ogni persona sono nella cartella [**01 Indicazioni**](https://drive.google.com/drive/folders/1UvzmBy5Q3U7GlKB9oX3G62AynPZuySeB).
 
 ## Cosa mostra la demo
 
