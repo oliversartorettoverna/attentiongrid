@@ -87,7 +87,8 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 | Motore: previsione, Erlang C, sfasamento partenze, rigioco (`engine/`) | pronto, provato su dati finti |
 | Console di base (`console/`) | pronta, provata con `?dati=esempio` |
 | Script dati 02 (tratti) | fatto sui dati veri: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
-| Script dati 04, simulatore BOXi | provati su un quartiere finto; da provare sui dati veri |
+| Script dati 04 (rischio) | fatto sui dati veri: 106.140 righe, picco 16:00–17:30 |
+| Simulatore BOXi | provato su un quartiere finto; da provare sui dati veri |
 | Script dati 01 (OSM) | provato sui dati veri: 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
 | Script dati 03 (meteo) | fatto: giorno scelto 3 ottobre 2024, `data/processed/meteo.csv` |
 | Altezze da EUBUCCO, sottopassi allagabili, navette e robot, grafica definitiva della console | da fare (TODO nei file) |
