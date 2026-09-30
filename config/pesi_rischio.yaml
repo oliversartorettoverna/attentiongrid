@@ -1,0 +1,33 @@
+# Pesi della mappa del rischio. TUTTI DA VALIDARE: vedi docs/ipotesi.md.
+# p = 1 - (1 - base) * prodotto(1 - contributo_i)
+
+base: 0.002
+
+attraversamenti:
+  per_attraversamento: 0.008
+
+doppia_fila:
+  contributo: 0.02
+  soglia_densita_negozi: 3.0        # negozi/locali entro 50 m per 100 m di strada
+  fasce: [["08:00", "10:00"], ["16:00", "19:30"]]
+
+scuola:
+  contributo: 0.03
+  distanza_m: 100
+  fasce: [["12:30", "14:00"], ["16:00", "17:00"]]
+
+pioggia:
+  soglia_mm_ora: 4.0
+  moltiplicatore: 1.8               # si applica ad attraversamenti, doppia fila, scuola
+
+abbagliamento:
+  contributo: 0.02
+  altezza_sole_max_gradi: 15
+  differenza_direzione_max_gradi: 20
+
+sottopasso:
+  contributo: 0.20                  # solo con pioggia sopra soglia
+
+gps_canyon:
+  contributo: 0.005
+  soglia_rapporto: 1.5

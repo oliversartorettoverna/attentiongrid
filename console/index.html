@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AttentionGrid – console demo</title>
+<style>
+  :root { --bg:#0f1318; --pan:#171c23; --ink:#e7ebf0; --muted:#95a0ae; --line:#2a323c;
+          --boxi:#f2c230; --navetta:#6aa8ff; --robot:#4fc994; --attesa:#ff5a4f; --gestione:#ffa53d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; margin:0 12px 0 0; }
+  #orologio { font:600 28px/1 ui-monospace, monospace; min-width:110px; }
+  button { background:var(--pan); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 12px; cursor:pointer; }
+  input[type=range] { width:260px; }
+  .pannelli { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:12px 16px; }
+  .pannello { background:var(--pan); border:1px solid var(--line); border-radius:10px; padding:12px; display:grid; gap:8px; min-width:0; }
+  .pannello h2 { margin:0; font-size:16px; display:flex; justify-content:space-between; }
+  .pannello h2 small { color:var(--muted); font-weight:400; }
+  svg.mappa { width:100%; height:auto; background:#11161c; border-radius:8px; }
+  svg.mappa line, svg.mappa polyline { stroke:#3a4450; stroke-width:2; fill:none; }
+  .stato { display:flex; gap:16px; flex-wrap:wrap; color:var(--muted); }
+  .stato b { color:var(--ink); font-size:18px; }
+  canvas { width:100%; height:70px; }
+  .coda { max-height:150px; overflow:auto; font-size:13px; display:grid; gap:4px; }
+  .coda div { border-left:3px solid var(--gestione); padding:2px 8px; background:#1d232b; }
+  .kpi { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; padding:0 16px 16px; }
+  .kpi div { background:var(--pan); border:1px solid var(--line); border-radius:8px; padding:8px; }
+  .kpi span { display:block; color:var(--muted); font-size:12px; }
+  .kpi b { font-size:18px; }
+  @media (max-width:900px) { .pannelli { grid-template-columns:1fr; } .kpi { grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>AttentionGrid</h1>
+  <div id="orologio">--:--</div>
+  <button id="play">▶ Avvia</button>
+  <label>Velocità <select id="velocita"><option value="30">×30</option><option value="60" selected>×60</option><option value="180">×180</option></select></label>
+  <input id="cursore" type="range" min="0" max="1" value="0">
+  <span id="fonte" style="color:var(--muted)"></span>
+</header>
+
+<div class="pannelli">
+  <section class="pannello" id="p-senza">
+    <h2>Senza sistema <small id="op-senza"></small></h2>
+    <svg class="mappa"></svg>
+    <div class="stato"><span>In attesa ora <b class="n-attesa">0</b></span><span>In gestione <b class="n-gestione">0</b></span></div>
+    <canvas></canvas>
+  </section>
+  <section class="pannello" id="p-con">
+    <h2>Con AttentionGrid <small id="op-con"></small></h2>
+    <svg class="mappa"></svg>
+    <div class="stato"><span>In attesa ora <b class="n-attesa">0</b></span><span>In gestione <b class="n-gestione">0</b></span></div>
+    <canvas></canvas>
+    <div class="coda" id="coda"></div>
+  </section>
+</div>
+<div class="kpi" id="kpi"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

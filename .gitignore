@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Dati grezzi e cache: restano in locale o nel Drive ("03 Dati")
+data/raw/*
+!data/raw/.gitkeep
+cache/
+*.gpkg
+*.osm
+*.pbf
+
+# Output rigenerabili pesanti
+sim/out/*
+!sim/out/.gitkeep
+console/data/scenario/*
+!console/data/scenario/.gitkeep
+
+# Sistema
+.DS_Store
+Thumbs.db
+.env

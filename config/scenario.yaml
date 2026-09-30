@@ -1,0 +1,42 @@
+# Scenario della demo. Tutti i valori modificabili stanno qui.
+# Lo stato di ogni numero (validato / da validare) è in docs/ipotesi.md.
+
+area:
+  nome: "Prati-Trastevere"
+  # lon_min, lat_min, lon_max, lat_max (WGS84)
+  riquadro: [12.455, 41.880, 12.480, 41.912]
+
+giorno:
+  data: "2025-10-00"        # TODO Pela: giorno feriale reale con temporale nel pomeriggio (vedi 03_meteo.py)
+  inizio: "14:00"
+  fine: "19:00"
+  fascia_min: 5
+
+flotte:
+  boxi:
+    veicoli: 12
+    velocita_max_kmh: 25
+    fermate_per_giro: 8
+    sosta_fermata_s: 90
+    deposito: "auto"         # auto = ufficio postale OSM più vicino al centro di Prati
+  navetta:
+    veicoli: 4
+    velocita_max_kmh: 20
+    percorso: "anello"       # solo nel finale multi-flotta
+  robot:
+    veicoli: 6
+    velocita_max_kmh: 6
+    percorso: "marciapiede"  # solo nel finale multi-flotta
+
+operatori:
+  durata_media_intervento_s: 90
+  attesa_max_s: 20
+  livello_servizio: 0.90
+
+ottimizzazione:
+  spostamento_max_min: 10     # di quanto si può anticipare o ritardare una partenza
+  passo_min: 1
+
+rigioco:
+  seme: 42                    # stesso seme per "senza" e "con"
+  operatori_senza_sistema: 3  # gli operatori fissi che avrebbe una flotta di 12 senza previsione
