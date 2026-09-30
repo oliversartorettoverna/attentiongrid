@@ -42,7 +42,7 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 | Parametro | Valore | Stato |
 |---|---|---|
 | Area | Prati e Trastevere (riquadro in `config/scenario.yaml`) | scelta |
-| Giorno | un giorno feriale reale con temporale nel pomeriggio, scelto con `03_meteo.py` | scelta |
+| Giorno | giovedì 3 ottobre 2024, giorno di scuola. Pioggia (Open-Meteo, Ponte Garibaldi): 5,0 mm alle 16, 4,2 alle 17, 3,7 alle 18. Nell'autunno 2025 nessun giorno feriale superava 4 mm/h alle 16 e alle 17 | scelta |
 | Finestra | 14:00–19:00, picco atteso 16:30 | scelta |
 | Flotte | 12 BOXi, 4 navette su anello fisso, 6 robot da marciapiede (solo nel finale) | scelta |
 | Deposito BOXi | ufficio postale OSM più vicino al centro di Prati (esclusi gli uffici di Poste Vaticane) | scelta |
