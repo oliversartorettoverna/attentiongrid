@@ -80,6 +80,21 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
     kpi_senza = kpi(ev_senza, n_veicoli, fissi, max(piano_senza))
     kpi_con = kpi(ev_con, n_veicoli, sum(piano_con) / len(piano_con), max(piano_con))
 
+    # 3b. Confronto a parità di servizio: senza previsione, per garantire il livello di servizio
+    # bisogna tenere in turno tutto il pomeriggio gli operatori che servono al picco
+    op_picco_senza = max(piano_senza)
+    ev_senza_pari = simula_coda(req_senza, lambda t: op_picco_senza)
+    ore = (fine_s - inizio_s) / 3600
+    def blocco(eventi, operatori_medi):
+        attese = [e["attesa_s"] for e in eventi] or [0]
+        return {"operatori_medi": round(operatori_medi, 1),
+                "ore_operatore": round(operatori_medi * ore, 1),
+                "veicoli_per_operatore": round(n_veicoli / max(operatori_medi, 1e-9), 1),
+                "attesa_media_s": round(sum(attese) / len(attese)),
+                "entro_attesa_max_pct": round(100 * sum(a <= o["attesa_max_s"] for a in attese) / len(attese))}
+    parita = {"senza": blocco(ev_senza_pari, op_picco_senza),
+              "con": blocco(ev_con, sum(piano_con) / len(piano_con))}
+
     # 4. Scrittura
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -92,7 +107,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
                                    "operatori_in_turno": piano_con}})
     scrivi("avvisi.json", avvisi(pas_con, rischio, fascia, nomi))
     scrivi("rigioco.json", {"senza": ev_senza, "con": ev_con})
-    scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "spostamenti_min": sposta})
+    scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "spostamenti_min": sposta})
     scrivi("veicoli.json", {"senza": percorsi_animazione(giri, {}, flotte),
                             "con": percorsi_animazione(giri, sposta, flotte)})
     gj = json.load(open(tratti_path, encoding="utf-8"))
@@ -107,6 +122,10 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
               f"attesa media={k['attesa_media_s']}s  fermi>60s={k['veicoli_fermi_oltre_60s']}  "
               f"operatori medi={k['operatori_medi']}  al picco={k['operatori_necessari_al_picco']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}")
+    for nome, k in parita.items():
+        print(f"PARI {nome:5s} operatori medi={k['operatori_medi']}  ore operatore={k['ore_operatore']}  "
+              f"veicoli/operatore={k['veicoli_per_operatore']}  attesa media={k['attesa_media_s']}s  "
+              f"entro {o['attesa_max_s']}s={k['entro_attesa_max_pct']}%")
 
 
 if __name__ == "__main__":

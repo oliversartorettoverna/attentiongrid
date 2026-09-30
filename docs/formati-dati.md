@@ -126,6 +126,8 @@ Quello che la console legge. Stessa struttura in `console/data/esempio/` (dati f
 ```
 Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`.
 
+`parita_servizio` confronta i due casi **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno per tutto il pomeriggio gli operatori necessari al picco non previsto, `con` segue il piano di Erlang C sulla curva prevista e sfasata. Ogni blocco ha `operatori_medi`, `ore_operatore`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`. I blocchi `senza`/`con` sopra restano il rigioco con `operatori_senza_sistema` fissi (quello animato nei pannelli).
+
 `veicoli.json`: i percorsi per animare i veicoli, senza e con lo sfasamento delle partenze. Ogni punto è `[ora, lat, lon]`.
 ```json
 {"senza": [{"veicolo_id": "boxi_01", "flotta": "boxi", "percorso": [["14:00:30", 41.9062, 12.4640]]}],

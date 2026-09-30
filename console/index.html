@@ -25,7 +25,7 @@
   canvas { width:100%; height:70px; }
   .coda { max-height:150px; overflow:auto; font-size:13px; display:grid; gap:4px; }
   .coda div { border-left:3px solid var(--gestione); padding:2px 8px; background:#1d232b; }
-  .kpi { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; padding:0 16px 16px; }
+  .kpi { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; padding:0 16px 16px; }
   .kpi div { background:var(--pan); border:1px solid var(--line); border-radius:8px; padding:8px; }
   .kpi span { display:block; color:var(--muted); font-size:12px; }
   .kpi b { font-size:18px; }
@@ -59,6 +59,12 @@
 </div>
 <div class="kpi" id="kpi"></div>
 
-<script src="app.js"></script>
+<script>
+  // Carica sempre l'ultima versione di app.js: http.server non manda intestazioni di cache
+  // e il browser altrimenti può tenere una copia vecchia dopo una modifica
+  const s = document.createElement("script");
+  s.src = "app.js?v=" + Date.now();
+  document.body.appendChild(s);
+</script>
 </body>
 </html>

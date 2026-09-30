@@ -9,7 +9,7 @@ const hm = (s) => `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Mat
 
 async function carica(cartella) {
   const nomi = ["tratti.geojson", "veicoli.json", "rigioco.json", "avvisi.json", "kpi.json", "carico.json"];
-  const file = await Promise.all(nomi.map((n) => fetch(`data/${cartella}/${n}`).then((r) => {
+  const file = await Promise.all(nomi.map((n) => fetch(`data/${cartella}/${n}`, { cache: "no-store" }).then((r) => {
     if (!r.ok) throw new Error(n);
     return r.json();
   })));
@@ -100,14 +100,21 @@ async function avvia() {
   const k = d.kpi, righe = [
     ["Richieste di aiuto", "richieste"], ["Picco di richieste insieme", "picco_richieste_insieme"],
     ["Attesa media (s)", "attesa_media_s"], ["Veicoli fermi oltre 60 s", "veicoli_fermi_oltre_60s"],
-    ["Veicoli per operatore", "veicoli_per_operatore"],
   ];
+  // A parità di servizio (se il motore lo fornisce): è il confronto onesto sul personale
+  const pari = k.parita_servizio;
+  if (pari) {
+    righe.push(["Veicoli per operatore, stesso servizio", "veicoli_per_operatore", pari]);
+    righe.push(["Ore operatore nel pomeriggio", "ore_operatore", pari]);
+  } else {
+    righe.push(["Veicoli per operatore", "veicoli_per_operatore"]);
+  }
   document.getElementById("kpi").innerHTML = "";
-  for (const [etichetta, chiave] of righe) {
+  for (const [etichetta, chiave, fonte = k] of righe) {
     const div = document.createElement("div");
     div.innerHTML = `<span></span><b></b>`;
     div.querySelector("span").textContent = etichetta;
-    div.querySelector("b").textContent = `${k.senza[chiave]} → ${k.con[chiave]}`;
+    div.querySelector("b").textContent = `${fonte.senza[chiave]} → ${fonte.con[chiave]}`;
     document.getElementById("kpi").appendChild(div);
   }
 
