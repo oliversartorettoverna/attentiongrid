@@ -10,7 +10,7 @@ Convenzioni valide per tutti i file:
 
 ---
 
-## 1. `data/processed/tratti.geojson` (Pela)
+## 1. `data/processed/tratti.geojson`
 
 Un tratto = un pezzo di strada tra due incroci. È la griglia su cui si calcola tutto.
 
@@ -32,7 +32,7 @@ GeoJSON `FeatureCollection` di `LineString`. Proprietà di ogni tratto:
 | `sottopasso` | booleano | Il tratto è un sottopasso o un punto basso che si allaga |
 | `fonte_dati` | stringa | Da dove vengono i valori, es. `"osm+eubucco"` |
 
-## 2. `data/processed/rischio.csv` (Pela)
+## 2. `data/processed/rischio.csv`
 
 Rischio di intervento per ogni tratto e ogni fascia di 5 minuti del giorno dello scenario.
 
@@ -51,7 +51,7 @@ seg_000123,16:30,0.061,0.010,0.020,0.030,0.0,0.0,0.0,0.001
 
 Come si combina: vedi `config/pesi_rischio.yaml` e `docs/ipotesi.md`.
 
-## 3. `data/processed/meteo.csv` (Pela)
+## 3. `data/processed/meteo.csv`
 
 Meteo orario del giorno scelto, da Open-Meteo.
 
@@ -62,7 +62,7 @@ Meteo orario del giorno scelto, da Open-Meteo.
 | `visibilita_m` | Visibilità, metri (se disponibile) |
 | `nuvolosita_pct` | Copertura nuvolosa, percentuale |
 
-## 4. `sim/out/giri.json` (Pela)
+## 4. `sim/out/giri.json`
 
 I viaggi simulati. Lista di veicoli:
 

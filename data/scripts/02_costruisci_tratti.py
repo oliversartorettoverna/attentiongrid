@@ -82,7 +82,7 @@ def main():
     # Altezza edifici entro 25 m dal tratto
     edifici = gpd.read_file(RAW / "edifici.geojson").to_crs(CRS_METRICO)
     if USA_EUBUCCO:
-        # TODO Pela: sostituire/integrare le altezze con EUBUCCO (colonna `height`)
+        # TODO: sostituire/integrare le altezze con EUBUCCO (colonna `height`)
         raise NotImplementedError("Integrazione EUBUCCO da fare")
     edifici["h"] = edifici.apply(altezza_edificio, axis=1)
     fasce = m[["seg_id", "geometry"]].copy()
@@ -112,7 +112,7 @@ def main():
     con_scuola = set(gpd.sjoin(scuole[["geometry"]], fasce, predicate="within")["seg_id"])
     m["scuola_vicina"] = m["seg_id"].isin(con_scuola)
 
-    # TODO Pela: marcare come `sottopasso` anche i punti bassi che si allagano
+    # TODO: marcare come `sottopasso` anche i punti bassi che si allagano
     # (modello di elevazione Copernicus + lista sottopassi di Roma), non solo i tunnel OSM.
 
     m["fonte_dati"] = "osm"

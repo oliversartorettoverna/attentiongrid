@@ -1,6 +1,6 @@
 // Console della demo. Legge i file prodotti da engine/pipeline.py (formati: docs/formati-dati.md).
 // Dati: ?dati=scenario (default, dati veri) oppure ?dati=esempio (dati finti di tools/genera_esempio.py).
-// TODO Oliver/Pela: finale multi-flotta (?dati=scenario_multiflotta), avvisi che lampeggiano sulla mappa,
+// TODO: finale multi-flotta (?dati=scenario_multiflotta), avvisi che lampeggiano sulla mappa,
 // grafica definitiva. Questa è la base funzionante da cui partire.
 
 const COLORI = { boxi: "var(--boxi)", navetta: "var(--navetta)", robot: "var(--robot)" };

@@ -7,7 +7,7 @@ area:
   riquadro: [12.455, 41.880, 12.480, 41.912]
 
 giorno:
-  data: "2025-10-00"        # TODO Pela: giorno feriale reale con temporale nel pomeriggio (vedi 03_meteo.py)
+  data: "2025-10-00"        # TODO: giorno feriale reale con temporale nel pomeriggio (vedi 03_meteo.py)
   inizio: "14:00"
   fine: "19:00"
   fascia_min: 5
