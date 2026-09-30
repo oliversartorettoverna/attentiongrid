@@ -67,6 +67,9 @@ def main():
     fine_s = minuti(sc["giorno"]["fine"]) * 60
 
     G = ox.load_graphml(RAW / "strade.graphml")
+    # Solo la parte di rete dove da ogni incrocio si può andare e tornare: gli altri (tagliati dal
+    # bordo del riquadro o in fondo a sensi unici) renderebbero le fermate irraggiungibili
+    G = G.subgraph(max(nx.strongly_connected_components(G), key=len)).copy()
     tratti = gpd.read_file(PROCESSED / "tratti.geojson")
     seg_di = {(int(r.u), int(r.v)): r.seg_id for r in tratti.itertuples()}
 
