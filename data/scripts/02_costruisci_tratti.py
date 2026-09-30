@@ -12,6 +12,9 @@ salvalo come data/raw/eubucco_lazio.gpkg e imposta USA_EUBUCCO = True.
 """
 import math
 
+from shapely import STRtree
+from shapely.geometry import LineString
+
 import geopandas as gpd
 import numpy as np
 import osmnx as ox
@@ -21,7 +24,11 @@ from comune import PROCESSED, RAW
 
 CRS_METRICO = "EPSG:32633"      # UTM 33N, in metri, va bene per Roma
 ALTEZZA_DEFAULT_M = 15.0        # palazzina tipica del centro di Roma quando manca il dato
+RAGGIO_FACCIATE_M = 40.0        # oltre questa distanza un lato della strada conta come aperto (fiume, piazza)
+PASSO_CAMPIONI_M = 10.0         # ogni quanti metri si misura la distanza tra le facciate
 USA_EUBUCCO = False
+
+STRADE_PRINCIPALI = {"trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link"}
 
 # Larghezza stimata in metri per tipo di strada OSM, quando manca il tag `width`
 LARGHEZZA_PER_TIPO = {
@@ -63,6 +70,33 @@ def direzione(geom_wgs84):
     return (math.degrees(math.atan2(dx, dy)) + 360) % 360
 
 
+def distanza_facciate(linea, albero, edifici_geom):
+    """Distanza mediana tra le facciate ai due lati del tratto (in metri, CRS metrico).
+
+    Lungo il tratto, ogni PASSO_CAMPIONI_M, traccia una linea perpendicolare e misura su ogni lato
+    la distanza dal primo edificio. Se su un lato non c'è niente entro RAGGIO_FACCIATE_M,
+    quel lato conta RAGGIO_FACCIATE_M (strada aperta, il GPS vede il cielo).
+    """
+    n = max(1, int(linea.length // PASSO_CAMPIONI_M))
+    misure = []
+    for i in range(n):
+        d = linea.length * (i + 0.5) / n
+        p = linea.interpolate(d)
+        q = linea.interpolate(min(d + 1.0, linea.length)) if d + 1.0 <= linea.length else linea.interpolate(d - 1.0)
+        dx, dy = (q.x - p.x, q.y - p.y) if d + 1.0 <= linea.length else (p.x - q.x, p.y - q.y)
+        norma = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / norma, dx / norma
+        totale = 0.0
+        for verso in (1, -1):
+            raggio = LineString([(p.x, p.y), (p.x + verso * nx * RAGGIO_FACCIATE_M, p.y + verso * ny * RAGGIO_FACCIATE_M)])
+            minimo = RAGGIO_FACCIATE_M
+            for j in albero.query(raggio, predicate="intersects"):
+                minimo = min(minimo, p.distance(edifici_geom[j].intersection(raggio)))
+            totale += minimo
+        misure.append(totale)
+    return float(np.median(misure))
+
+
 def main():
     G = ox.load_graphml(RAW / "strade.graphml")
     tratti = ox.graph_to_gdfs(G, nodes=False).reset_index()
@@ -74,7 +108,9 @@ def main():
     larghezza_osm = tratti.get("width", pd.Series([None] * len(tratti))).map(numero)
     tratti["larghezza_m"] = pd.to_numeric(larghezza_osm.fillna(tipo.map(LARGHEZZA_PER_TIPO)).fillna(6.0)).astype(float)
     tunnel = tratti.get("tunnel", pd.Series([None] * len(tratti))).map(primo)
-    tratti["sottopasso"] = tunnel.isin(["yes", "building_passage", "culvert"])
+    # Solo i sottovia stradali: gli archi sotto i palazzi (`building_passage`, o `tunnel=yes` su
+    # vicoli residenziali come l'Arco de' Tolomei) non sono sottopassi che si allagano
+    tratti["sottopasso"] = (tunnel == "yes") & tipo.isin(STRADE_PRINCIPALI)
 
     m = tratti.to_crs(CRS_METRICO)
     m["lunghezza_m"] = m.geometry.length.round(1)
@@ -90,7 +126,11 @@ def main():
     vicini = gpd.sjoin(edifici[["h", "geometry"]], fasce, predicate="intersects")
     mediana = vicini.groupby("seg_id")["h"].median()
     m["altezza_edifici_m"] = pd.to_numeric(m["seg_id"].map(mediana)).fillna(ALTEZZA_DEFAULT_M).astype(float).round(1)
-    m["rapporto_canyon"] = (m["altezza_edifici_m"] / m["larghezza_m"]).round(2)
+    # Rapporto canyon = altezza / distanza tra le facciate (non la carreggiata)
+    geom_edifici = edifici.geometry.values
+    albero = STRtree(geom_edifici)
+    m["distanza_facciate_m"] = [round(distanza_facciate(g, albero, geom_edifici), 1) for g in m.geometry]
+    m["rapporto_canyon"] = (m["altezza_edifici_m"] / m["distanza_facciate_m"].clip(lower=m["larghezza_m"])).round(2)
 
     # Attraversamenti entro 10 m
     attr = gpd.read_file(RAW / "attraversamenti.geojson").to_crs(CRS_METRICO)
@@ -116,7 +156,7 @@ def main():
     # (modello di elevazione Copernicus + lista sottopassi di Roma), non solo i tunnel OSM.
 
     m["fonte_dati"] = "osm"
-    colonne = ["seg_id", "u", "v", "nome", "lunghezza_m", "larghezza_m", "altezza_edifici_m", "rapporto_canyon",
+    colonne = ["seg_id", "u", "v", "nome", "lunghezza_m", "larghezza_m", "distanza_facciate_m", "altezza_edifici_m", "rapporto_canyon",
                "direzione_gradi", "attraversamenti", "densita_negozi", "scuola_vicina", "sottopasso",
                "fonte_dati", "geometry"]
     PROCESSED.mkdir(parents=True, exist_ok=True)

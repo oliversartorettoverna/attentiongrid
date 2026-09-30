@@ -34,8 +34,8 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 | Scuola | scuola entro 100 m e fascia 16:00–17:00 (tempo pieno) o 12:30–14:00 | 0,03 | da misurare nel rilievo di Riccio |
 | Pioggia forte | pioggia > 4 mm/h | moltiplica per 1,8 i tre fattori sopra | stima |
 | Abbagliamento | sole sotto 15° di altezza e allineato con la strada (differenza < 20°) | 0,02 | NHTSA indaga Tesla per sole basso, nebbia, polvere |
-| Sottopasso | sottopasso o punto basso e pioggia > 4 mm/h | 0,2 | Waymo sospende il servizio per allagamenti (mag. 2026) |
-| GPS in canyon urbano | rapporto altezza/larghezza > 1,5 | 0,005 | BOXi ha sensori inerziali: il GPS pesa poco |
+| Sottopasso | sottovia stradale (OSM `tunnel=yes` su strade principali: Lungotevere, Galleria Principe Amedeo) e pioggia > 4 mm/h | 0,2 | Waymo sospende il servizio per allagamenti (mag. 2026) |
+| GPS in canyon urbano | rapporto altezza edifici / distanza tra le facciate > 1,5 (distanza misurata sulle piante OSM) | 0,005 | BOXi ha sensori inerziali: il GPS pesa poco |
 
 ## Scenario della demo
 
@@ -52,3 +52,4 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 | Dato | Situazione | Cosa usiamo |
 |---|---|---|
 | Altezza edifici | In OSM solo 66 edifici su 5.598 hanno `height` e 452 `building:levels` (download del 30/9) | Valore di riserva 15 m dove manca, finché non si integra EUBUCCO. Il rapporto canyon (GPS) è quindi poco affidabile |
+| Via Ottaviano | In OSM è pedonale: i BOXi non ci passano. Il rilievo di Riccio lì misura i pedoni ma non entra nella mappa del rischio | Da valutare se sostituirla nella Scheda rilievo con una via carrabile |

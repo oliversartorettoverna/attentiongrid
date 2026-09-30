@@ -24,12 +24,13 @@ GeoJSON `FeatureCollection` di `LineString`. Proprietà di ogni tratto:
 | `lunghezza_m` | numero | Lunghezza del tratto in metri |
 | `larghezza_m` | numero | Larghezza stimata (da OSM `width` o da tipo di strada) |
 | `altezza_edifici_m` | numero | Altezza mediana degli edifici che si affacciano (entro 25 m) |
-| `rapporto_canyon` | numero | `altezza_edifici_m / larghezza_m`. Sopra 1,5 il GPS peggiora |
+| `distanza_facciate_m` | numero | Distanza mediana tra le facciate dei due lati, misurata sulle piante degli edifici OSM (massimo 40 m per lato: oltre, il lato è aperto) |
+| `rapporto_canyon` | numero | `altezza_edifici_m / distanza_facciate_m`. Sopra 1,5 il GPS peggiora |
 | `direzione_gradi` | numero | Orientamento del tratto, 0 = nord, 90 = est (serve per l'abbagliamento) |
 | `attraversamenti` | intero | Strisce pedonali e semafori pedonali sul tratto |
 | `densita_negozi` | numero | Negozi e locali entro 50 m, per 100 m di strada (indicatore di doppia fila) |
 | `scuola_vicina` | booleano | C'è una scuola entro 100 m |
-| `sottopasso` | booleano | Il tratto è un sottopasso o un punto basso che si allaga |
+| `sottopasso` | booleano | Il tratto è un sottopasso (OSM `tunnel=yes`) o un punto basso che si allaga. Gli archi sotto i palazzi (`building_passage`) non contano |
 | `fonte_dati` | stringa | Da dove vengono i valori, es. `"osm+eubucco"` |
 
 ## 2. `data/processed/rischio.csv`
