@@ -84,6 +84,7 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 | Pezzo | Stato |
 |---|---|
 | Struttura repo, formati, parametri | pronto |
+| Griglia dell'attenzione: livello verde/giallo/rosso per veicolo e minuto (`engine/attenzione.py`) | motore fatto; console da fare |
 | Motore: previsione, Erlang C, sfasamento partenze, rigioco (`engine/`) | pronto, provato su dati finti |
 | Console di base (`console/`) | pronta, provata con `?dati=esempio` |
 | Script dati 02 (tratti) | fatto sui dati veri: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |

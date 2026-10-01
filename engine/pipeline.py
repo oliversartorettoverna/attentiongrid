@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import attenzione  # noqa: E402
 from erlang import operatori_necessari  # noqa: E402
 from ottimizza import ottimizza  # noqa: E402
 from previsione import (avvisi, carica_giri, carica_nomi_vie, carica_rischio,  # noqa: E402
@@ -95,6 +96,12 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
     parita = {"senza": blocco(ev_senza_pari, op_picco_senza),
               "con": blocco(ev_con, sum(piano_con) / len(piano_con))}
 
+    # 3c. Griglia dell'attenzione: livello di ogni veicolo minuto per minuto (scenario con sistema)
+    at = cfg["attenzione"]
+    stati = attenzione.livelli(pas_con, rischio, fascia, nomi, inizio_s, fine_s, at["orizzonte_min"] * 60,
+                               at["soglia_osservazione"], at["soglia_intervento"])
+    valid = attenzione.validazione(stati, req_con, inizio_s, at["anticipo_validazione_min"] * 60)
+
     # 4. Scrittura
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -106,6 +113,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
                            "con": {"richieste_attese": [round(x, 3) for x in curva_con], "operatori_necessari": piano_con,
                                    "operatori_in_turno": piano_con}})
     scrivi("avvisi.json", avvisi(pas_con, rischio, fascia, nomi))
+    scrivi("attenzione.json", attenzione.serializza(stati, inizio_s, at, valid))
     scrivi("rigioco.json", {"senza": ev_senza, "con": ev_con})
     scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "spostamenti_min": sposta})
     scrivi("veicoli.json", {"senza": percorsi_animazione(giri, {}, flotte),
@@ -122,6 +130,11 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
               f"attesa media={k['attesa_media_s']}s  fermi>60s={k['veicoli_fermi_oltre_60s']}  "
               f"operatori medi={k['operatori_medi']}  al picco={k['operatori_necessari_al_picco']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}")
+    v = valid
+    print(f"ATTENZIONE tempo in movimento: verde {v['tempo_pct']['verde']}% giallo {v['tempo_pct']['giallo']}% "
+          f"rosso {v['tempo_pct']['rosso']}% | richieste da verde {v['richieste_da_pct']['verde']}% "
+          f"giallo {v['richieste_da_pct']['giallo']}% rosso {v['richieste_da_pct']['rosso']}% | "
+          f"rosso/verde x{v['rosso_su_verde']}")
     for nome, k in parita.items():
         print(f"PARI {nome:5s} operatori medi={k['operatori_medi']}  ore operatore={k['ore_operatore']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}  attesa media={k['attesa_media_s']}s  "

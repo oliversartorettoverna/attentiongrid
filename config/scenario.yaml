@@ -33,6 +33,12 @@ operatori:
   attesa_max_s: 20
   livello_servizio: 0.90
 
+attenzione:
+  orizzonte_min: 3              # quanto avanti guarda il livello di ogni veicolo
+  soglia_osservazione: 0.25     # P(richiesta nei prossimi 3 min) sopra cui il veicolo diventa giallo
+  soglia_intervento: 0.45       # ... e rosso: un operatore viene assegnato prima che si fermi
+  anticipo_validazione_min: 2   # per misurare le soglie: stato del veicolo 2 minuti prima di ogni richiesta
+
 ottimizzazione:
   spostamento_max_min: 10     # di quanto si può anticipare o ritardare una partenza
   passo_min: 1
