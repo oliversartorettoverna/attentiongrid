@@ -67,6 +67,7 @@ python engine/pipeline.py                     # previsione, turni, ottimizzazion
 # 4. Demo
 python -m http.server 8000 --directory console
 # poi apri http://localhost:8000
+# tasti: spazio avvia/ferma · 1 poco prima del picco · ← → ±10 min · R risultato · F schermo intero
 ```
 
 Per lavorare sulla console senza aspettare dati e simulazione: `python tools/genera_esempio.py` rigenera i file finti in `console/data/esempio/`.
@@ -84,9 +85,9 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 | Pezzo | Stato |
 |---|---|
 | Struttura repo, formati, parametri | pronto |
-| Griglia dell'attenzione: livello verde/giallo/rosso per veicolo e minuto (`engine/attenzione.py`) | motore fatto; console da fare |
+| Griglia dell'attenzione: livello verde/giallo/rosso per veicolo e minuto (`engine/attenzione.py`) | fatta, nel motore e in console |
+| Console v2: strade che si accendono col rischio, previsione del picco, griglia, risultato finale, tasti per il palco | fatta; provata a 1920×1080 e 1440×900 |
 | Motore: previsione, Erlang C, sfasamento partenze, rigioco (`engine/`) | pronto, provato su dati finti |
-| Console di base (`console/`) | pronta, provata con `?dati=esempio` |
 | Script dati 02 (tratti) | fatto sui dati veri: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
 | Script dati 04 (rischio) | fatto sui dati veri: 106.140 righe, picco 16:00–17:30 |
 | Simulatore BOXi | fatto sui dati veri: 12 BOXi, 4 giri da 8 fermate, deposito Roma 5, rientro entro le 18:39 |

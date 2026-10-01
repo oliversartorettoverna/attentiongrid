@@ -15,6 +15,19 @@ from collections import defaultdict
 from previsione import NOMI_MOTIVI, hm, riga_rischio
 
 
+def motivo_principale(riga: dict | None) -> str:
+    """Il fattore che pesa di più. La pioggia amplifica gli altri, quindi si aggiunge al motivo
+    invece di prenderne il posto: "uscita scuola + pioggia", non solo "pioggia forte"."""
+    if not riga:
+        return ""
+    altri = {k: riga.get(k, 0.0) for k in NOMI_MOTIVI if k != "c_meteo"}
+    chiave = max(altri, key=altri.get)
+    motivo = NOMI_MOTIVI[chiave] if altri[chiave] > 0 else ""
+    if riga.get("c_meteo", 0.0) > 0 and chiave != "c_sottopasso":
+        motivo += " + pioggia"
+    return motivo
+
+
 def livelli(lista_passate: list, rischio: dict, fascia_min: int, nomi_vie: dict,
             inizio_s: int, fine_s: int, orizzonte_s: int, soglia_oss: float, soglia_int: float) -> dict:
     """{veicolo_id: [stato per minuto]}, stato = [livello, P, via, motivo, tra_s] oppure [-1]."""
@@ -39,10 +52,7 @@ def livelli(lista_passate: list, rischio: dict, fascia_min: int, nomi_vie: dict,
             prob = 1 - resto
             livello = 0 if prob < soglia_oss else (1 if prob < soglia_int else 2)
             t_peggiore, _, seg, riga = max(avanti, key=lambda x: x[1])
-            motivo = ""
-            if riga:
-                chiave = max(NOMI_MOTIVI, key=lambda k: riga.get(k, 0.0))
-                motivo = NOMI_MOTIVI[chiave] if riga.get(chiave, 0.0) > 0 else ""
+            motivo = motivo_principale(riga)
             stati.append([livello, round(prob, 3), nomi_vie.get(seg, ""), motivo, int(t_peggiore - t)])
         out[v] = stati
     return out

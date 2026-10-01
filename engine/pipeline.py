@@ -47,6 +47,24 @@ def percorsi_animazione(giri: list, sposta: dict, flotte: set) -> list:
     return out
 
 
+def rischio_console(rischio: dict, rischio_path, inizio_s: int, fine_s: int, fascia_min: int, data: str) -> dict:
+    """Rischio di ogni tratto per fascia, in millesimi, per colorare le strade in console.
+    Aggiunge la pioggia per fascia se accanto a rischio.csv c'è meteo.csv."""
+    fasce = [hm(t) for t in range(inizio_s, fine_s, fascia_min * 60)]
+    indice = {f: i for i, f in enumerate(fasce)}
+    p = {}
+    for (seg, f), r in rischio.items():
+        if f in indice:
+            p.setdefault(seg, [0] * len(fasce))[indice[f]] = round(r["p_intervento"] * 1000)
+    pioggia = None
+    meteo = Path(rischio_path).with_name("meteo.csv")
+    if meteo.exists():
+        import csv
+        ore = {r["ora"][:2]: float(r["pioggia_mm"]) for r in csv.DictReader(open(meteo, encoding="utf-8"))}
+        pioggia = [ore.get(f[:2]) for f in fasce]
+    return {"data": data, "fasce": fasce, "pioggia_mm": pioggia, "p_millesimi": p}
+
+
 def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
     cfg = yaml.safe_load(open(config_path, encoding="utf-8"))
     g, o, oz, rg = cfg["giorno"], cfg["operatori"], cfg["ottimizzazione"], cfg["rigioco"]
@@ -118,6 +136,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
     scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "spostamenti_min": sposta})
     scrivi("veicoli.json", {"senza": percorsi_animazione(giri, {}, flotte),
                             "con": percorsi_animazione(giri, sposta, flotte)})
+    scrivi("rischio_console.json", rischio_console(rischio, rischio_path, inizio_s, fine_s, fascia, str(g.get("data", ""))))
     gj = json.load(open(tratti_path, encoding="utf-8"))
     for ft in gj["features"]:
         ft["properties"] = {"seg_id": ft["properties"]["seg_id"], "nome": ft["properties"].get("nome", "")}

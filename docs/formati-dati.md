@@ -128,6 +128,11 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 
 `parita_servizio` confronta i due casi **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno per tutto il pomeriggio gli operatori necessari al picco non previsto, `con` segue il piano di Erlang C sulla curva prevista e sfasata. Ogni blocco ha `operatori_medi`, `ore_operatore`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`. I blocchi `senza`/`con` sopra restano il rigioco con `operatori_senza_sistema` fissi (quello animato nei pannelli).
 
+`rischio_console.json`: il rischio di ogni tratto per fascia, per colorare le strade, e la data dello scenario (`data`). `p_millesimi` è `p_intervento × 1000` arrotondato (per tenere il file piccolo); `pioggia_mm` è la pioggia dell'ora di ogni fascia, `null` se manca `meteo.csv`.
+```json
+{"data": "2024-10-03", "fasce": ["14:00", "14:05"], "pioggia_mm": [2.5, 2.5], "p_millesimi": {"seg_000123": [18, 18]}}
+```
+
 `attenzione.json`: la griglia dell'attenzione (scenario con sistema). Per ogni veicolo un elenco con uno stato per minuto a partire da `inizio`: `[livello, P, via, motivo, tra_s]`, oppure `[-1]` se il veicolo è fermo al deposito. `livello` 0 verde (autonomo), 1 giallo (in osservazione), 2 rosso (intervento probabile); `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti; `via` e `motivo` sono il tratto più rischioso davanti e il suo fattore principale; `tra_s` quanti secondi mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
 ```json
 {"passo_s": 60, "inizio": "14:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},
