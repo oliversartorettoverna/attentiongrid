@@ -21,15 +21,15 @@ const el = (id) => document.getElementById(id);
 
 async function carica(cartella) {
   const obbligatori = ["tratti.geojson", "veicoli.json", "rigioco.json", "kpi.json", "carico.json"];
-  const facoltativi = ["attenzione.json", "rischio_console.json"];
+  const facoltativi = ["attenzione.json", "rischio_console.json", "sensibilita.json"];
   const leggi = (n, serve) => fetch(`data/${cartella}/${n}`, { cache: "no-store" }).then((r) => {
     if (!r.ok) { if (serve) throw new Error(n); return null; }
     return r.json();
   });
-  const [tratti, veicoli, rigioco, kpi, carico, attenzione, rischio] = await Promise.all([
+  const [tratti, veicoli, rigioco, kpi, carico, attenzione, rischio, sensibilita] = await Promise.all([
     ...obbligatori.map((n) => leggi(n, true)), ...facoltativi.map((n) => leggi(n, false)),
   ]);
-  return { tratti, veicoli, rigioco, kpi, carico, attenzione, rischio };
+  return { tratti, veicoli, rigioco, kpi, carico, attenzione, rischio, sensibilita };
 }
 
 function proiezione(tratti) {
@@ -240,12 +240,15 @@ async function avvia() {
     const molt = pari.con.veicoli_per_operatore / pari.senza.veicoli_per_operatore;
     el("ris-sotto").textContent = giorno || "dati di esempio";
     el("ris-tre").innerHTML = [
-      [`−${risparmio}%`, "ore operatore", `${virgola(pari.senza.ore_operatore)} → ${virgola(pari.con.ore_operatore)} ore nel pomeriggio, stesso livello di servizio`],
+      [`−${risparmio}%`, "ore operatore", `${virgola(pari.senza.ore_operatore)} → ${virgola(pari.con.ore_operatore)} ore nel pomeriggio, stesso livello di servizio` +
+        (d.sensibilita ? `<br><b style="color:var(--previsto)">tra −${d.sensibilita.intervalli.risparmio_ore_pct[0]}% e −${d.sensibilita.intervalli.risparmio_ore_pct[1]}% con i pesi del rischio a ±50%</b>` : "")],
       [`×${virgola(molt)}`, "veicoli per operatore", `da ${virgola(pari.senza.veicoli_per_operatore)} a ${virgola(pari.con.veicoli_per_operatore)}`],
       [`${k.con.veicoli_fermi_oltre_60s}`, "veicoli fermi oltre un minuto", `invece di ${k.senza.veicoli_fermi_oltre_60s} con ${d.carico.senza.operatori_in_turno[0]} operatori fissi`],
     ].map(([g, c, da]) => `<div><div class="grande">${g}</div><div class="cosa">${c}</div><div class="da">${da}</div></div>`).join("");
     el("ris-nota").textContent = `Livello di servizio: ${pari.con.entro_attesa_max_pct}% (con) e ${pari.senza.entro_attesa_max_pct}% (senza) delle richieste gestite entro 20 s. ` +
-      "Rischio calcolato da dati aperti (OpenStreetMap, Open-Meteo); i pesi sono stime da validare.";
+      "Rischio calcolato da dati aperti (OpenStreetMap, Open-Meteo); i pesi sono stime da validare." +
+      (d.sensibilita ? ` Con ogni peso a ±50% (uno alla volta e tutti insieme) e durata degli interventi da 45 a 135 s, ` +
+        `il risparmio di ore resta tra ${d.sensibilita.intervalli.risparmio_ore_pct[0]}% e ${d.sensibilita.intervalli.risparmio_ore_pct[1]}%.` : "");
   }
   const mostraRisultato = (si) => el("risultato").classList.toggle("visibile", si);
 

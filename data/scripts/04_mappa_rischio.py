@@ -31,19 +31,21 @@ def differenza_angolo(a, b):
     return min(d, 360 - d)
 
 
-def main():
-    sc, pesi = leggi_scenario(), leggi_pesi()
-    data = sc["giorno"]["data"]
-    dt.date.fromisoformat(data)  # errore chiaro se la data non è stata ancora scelta
-    passo = sc["giorno"]["fascia_min"]
-    fasce_min = list(range(minuti(sc["giorno"]["inizio"]), minuti(sc["giorno"]["fine"]), passo))
-
+def carica_tratti():
     tratti = gpd.read_file(PROCESSED / "tratti.geojson")
     for c in ["rapporto_canyon", "direzione_gradi", "attraversamenti", "densita_negozi"]:
         tratti[c] = pd.to_numeric(tratti[c], errors="coerce").fillna(0.0)
     for c in ["scuola_vicina", "sottopasso"]:
         tratti[c] = tratti[c].astype(str).str.lower().isin(["true", "1", "yes"])
-    meteo = pd.read_csv(PROCESSED / "meteo.csv")
+    return tratti
+
+
+def calcola(tratti, meteo, sc: dict, pesi: dict) -> pd.DataFrame:
+    """Rischio per tratto e fascia con i pesi dati (usato anche da tools/sensibilita.py)."""
+    data = sc["giorno"]["data"]
+    dt.date.fromisoformat(data)  # errore chiaro se la data non è stata ancora scelta
+    passo = sc["giorno"]["fascia_min"]
+    fasce_min = list(range(minuti(sc["giorno"]["inizio"]), minuti(sc["giorno"]["fine"]), passo))
     pioggia_ora = dict(zip(meteo["ora"].str[:2].astype(int), meteo["pioggia_mm"]))
     nuvole_ora = dict(zip(meteo["ora"].str[:2].astype(int), meteo["nuvolosita_pct"]))
     sole = posizione_sole(data, fasce_min)
@@ -80,7 +82,12 @@ def main():
 
     colonne = ["seg_id", "fascia", "p_intervento", "c_attraversamenti", "c_doppia_fila", "c_scuola",
                "c_meteo", "c_abbagliamento", "c_sottopasso", "c_gps"]
-    df = pd.DataFrame(righe, columns=colonne)
+    return pd.DataFrame(righe, columns=colonne)
+
+
+def main():
+    tratti = carica_tratti()
+    df = calcola(tratti, pd.read_csv(PROCESSED / "meteo.csv"), leggi_scenario(), leggi_pesi())
     df.to_csv(PROCESSED / "rischio.csv", index=False)
     print(f"Scritte {len(df)} righe in {PROCESSED / 'rischio.csv'}")
     print("Tratti più rischiosi alle 16:30:")

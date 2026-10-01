@@ -133,6 +133,8 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 {"data": "2024-10-03", "fasce": ["14:00", "14:05"], "pioggia_mm": [2.5, 2.5], "p_millesimi": {"seg_000123": [18, 18]}}
 ```
 
+`sensibilita.json` (facoltativo, da `tools/sensibilita.py`): una riga per variante (`parametro`, `gruppo`, `fattore`, `richieste`, `risparmio_ore_pct`, `veicoli_per_operatore_senza`/`_con`, `fermi_oltre_60s_senza`/`_con`, `richieste_da_rosso_pct`) e `intervalli` con minimo e massimo di ogni numero su tutte le varianti.
+
 `attenzione.json`: la griglia dell'attenzione (scenario con sistema). Per ogni veicolo un elenco con uno stato per minuto a partire da `inizio`: `[livello, P, via, motivo, tra_s]`, oppure `[-1]` se il veicolo è fermo al deposito. `livello` 0 verde (autonomo), 1 giallo (in osservazione), 2 rosso (intervento probabile); `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti; `via` e `motivo` sono il tratto più rischioso davanti e il suo fattore principale; `tra_s` quanti secondi mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
 ```json
 {"passo_s": 60, "inizio": "14:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},

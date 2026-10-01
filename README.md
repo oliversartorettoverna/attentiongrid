@@ -64,6 +64,9 @@ python sim/simula_flotta.py                   # giri di consegna dei veicoli
 # 3. Motore
 python engine/pipeline.py                     # previsione, turni, ottimizzazione, rigioco → console/data/scenario/
 
+# Facoltativo: sensibilità dei risultati ai pesi (qualche minuto) → console/data/scenario/sensibilita.json
+python tools/sensibilita.py
+
 # 4. Demo
 python -m http.server 8000 --directory console
 # poi apri http://localhost:8000
@@ -80,18 +83,21 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 - Se cambi un formato di file, aggiorna prima `docs/formati-dati.md` e avvisa nel gruppo.
 - Ogni numero inventato o stimato va in `config/` e in `docs/ipotesi.md`, con scritto se è validato o no.
 
-## Stato (30 settembre)
+## Stato (1 ottobre)
 
 | Pezzo | Stato |
 |---|---|
-| Struttura repo, formati, parametri | pronto |
-| Griglia dell'attenzione: livello verde/giallo/rosso per veicolo e minuto (`engine/attenzione.py`) | fatta, nel motore e in console |
-| Console v2: strade che si accendono col rischio, previsione del picco, griglia, risultato finale, tasti per il palco | fatta; provata a 1920×1080 e 1440×900 |
-| Motore: previsione, Erlang C, sfasamento partenze, rigioco (`engine/`) | pronto, provato su dati finti |
-| Script dati 02 (tratti) | fatto sui dati veri: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
-| Script dati 04 (rischio) | fatto sui dati veri: 106.140 righe, picco 16:00–17:30 |
-| Simulatore BOXi | fatto sui dati veri: 12 BOXi, 4 giri da 8 fermate, deposito Roma 5, rientro entro le 18:39 |
-| Demo sui dati veri (`console/data/scenario/`) | generata; KPI da rivedere (vedi `docs/ipotesi.md`) |
-| Script dati 01 (OSM) | provato sui dati veri: 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
-| Script dati 03 (meteo) | fatto: giorno scelto 3 ottobre 2024, `data/processed/meteo.csv` |
-| Altezze da EUBUCCO, sottopassi allagabili, navette e robot, grafica definitiva della console | da fare (TODO nei file) |
+| Dati OSM (`01`) | fatto: 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
+| Meteo (`03`) | fatto: giovedì 3 ottobre 2024, pioggia forte 16–18 |
+| Tratti (`02`) | fatto: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
+| Mappa del rischio (`04`) | fatto: picco 16:00–17:30 |
+| Simulatore BOXi (`sim/`) | fatto: 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
+| Motore: previsione, Erlang C, sfasamento, rigioco, parità di servizio (`engine/`) | fatto: −56% ore operatore, da 1,3 a 3 veicoli per operatore |
+| Griglia dell'attenzione (`engine/attenzione.py`) | fatto: il rosso anticipa il 52% delle richieste |
+| Sensibilità (`tools/sensibilita.py`) | fatto: risparmio tra 46% e 59% con pesi a ±50% |
+| Console | fatto: strade che si accendono, previsione del picco, griglia, risultato, tasti per il palco |
+| Finale a tre flotte con pooling degli operatori | da fare |
+| Curva di scalabilità (12 → 200 veicoli) | da fare |
+| Percorsi che evitano le strade rosse | da fare |
+| Dati satellitari Copernicus (punti che si allagano), altezze EUBUCCO | da fare |
+| Taratura sul rilievo di Riccio (2 e 5 ottobre) | in attesa della Scheda rilievo |
