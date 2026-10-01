@@ -37,5 +37,5 @@ flowchart LR
 ## Perché così
 
 - **Precalcolato:** 16 ore di hackathon non bastano per un sistema in tempo reale, e il wifi della sede non è affidabile.
-- **Formati fissati prima:** Oliver e Pela lavorano in parallelo; la console parte subito con i dati finti.
+- **Formati fissati prima:** dati, motore e console si sviluppano separatamente; la console parte subito con i dati finti.
 - **Parametri fuori dal codice:** la giuria chiederà "da dove vengono questi numeri". La risposta è `docs/ipotesi.md`.

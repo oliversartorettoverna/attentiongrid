@@ -8,7 +8,7 @@ attraversamenti:
 
 doppia_fila:
   contributo: 0.02
-  soglia_densita_negozi: 3.0        # negozi/locali entro 50 m per 100 m di strada
+  soglia_densita_negozi: 10.0       # negozi/locali entro 50 m per 100 m di strada; 1/3 dei tratti (da tarare sul rilievo)
   fasce: [["08:00", "10:00"], ["16:00", "19:30"]]
 
 scuola:
@@ -24,6 +24,7 @@ abbagliamento:
   contributo: 0.02
   altezza_sole_max_gradi: 15
   differenza_direzione_max_gradi: 20
+  nuvolosita_max_pct: 70            # con cielo più coperto il sole non abbaglia
 
 sottopasso:
   contributo: 0.20                  # solo con pioggia sopra soglia

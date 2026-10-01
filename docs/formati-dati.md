@@ -10,7 +10,7 @@ Convenzioni valide per tutti i file:
 
 ---
 
-## 1. `data/processed/tratti.geojson` (Pela)
+## 1. `data/processed/tratti.geojson`
 
 Un tratto = un pezzo di strada tra due incroci. È la griglia su cui si calcola tutto.
 
@@ -24,15 +24,16 @@ GeoJSON `FeatureCollection` di `LineString`. Proprietà di ogni tratto:
 | `lunghezza_m` | numero | Lunghezza del tratto in metri |
 | `larghezza_m` | numero | Larghezza stimata (da OSM `width` o da tipo di strada) |
 | `altezza_edifici_m` | numero | Altezza mediana degli edifici che si affacciano (entro 25 m) |
-| `rapporto_canyon` | numero | `altezza_edifici_m / larghezza_m`. Sopra 1,5 il GPS peggiora |
+| `distanza_facciate_m` | numero | Distanza mediana tra le facciate dei due lati, misurata sulle piante degli edifici OSM (massimo 40 m per lato: oltre, il lato è aperto) |
+| `rapporto_canyon` | numero | `altezza_edifici_m / distanza_facciate_m`. Sopra 1,5 il GPS peggiora |
 | `direzione_gradi` | numero | Orientamento del tratto, 0 = nord, 90 = est (serve per l'abbagliamento) |
 | `attraversamenti` | intero | Strisce pedonali e semafori pedonali sul tratto |
 | `densita_negozi` | numero | Negozi e locali entro 50 m, per 100 m di strada (indicatore di doppia fila) |
 | `scuola_vicina` | booleano | C'è una scuola entro 100 m |
-| `sottopasso` | booleano | Il tratto è un sottopasso o un punto basso che si allaga |
+| `sottopasso` | booleano | Il tratto è un sottopasso (OSM `tunnel=yes`) o un punto basso che si allaga. Gli archi sotto i palazzi (`building_passage`) non contano |
 | `fonte_dati` | stringa | Da dove vengono i valori, es. `"osm+eubucco"` |
 
-## 2. `data/processed/rischio.csv` (Pela)
+## 2. `data/processed/rischio.csv`
 
 Rischio di intervento per ogni tratto e ogni fascia di 5 minuti del giorno dello scenario.
 
@@ -51,7 +52,7 @@ seg_000123,16:30,0.061,0.010,0.020,0.030,0.0,0.0,0.0,0.001
 
 Come si combina: vedi `config/pesi_rischio.yaml` e `docs/ipotesi.md`.
 
-## 3. `data/processed/meteo.csv` (Pela)
+## 3. `data/processed/meteo.csv`
 
 Meteo orario del giorno scelto, da Open-Meteo.
 
@@ -62,7 +63,7 @@ Meteo orario del giorno scelto, da Open-Meteo.
 | `visibilita_m` | Visibilità, metri (se disponibile) |
 | `nuvolosita_pct` | Copertura nuvolosa, percentuale |
 
-## 4. `sim/out/giri.json` (Pela)
+## 4. `sim/out/giri.json`
 
 I viaggi simulati. Lista di veicoli:
 
@@ -124,6 +125,8 @@ Quello che la console legge. Stessa struttura in `console/data/esempio/` (dati f
 }
 ```
 Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`.
+
+`parita_servizio` confronta i due casi **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno per tutto il pomeriggio gli operatori necessari al picco non previsto, `con` segue il piano di Erlang C sulla curva prevista e sfasata. Ogni blocco ha `operatori_medi`, `ore_operatore`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`. I blocchi `senza`/`con` sopra restano il rigioco con `operatori_senza_sistema` fissi (quello animato nei pannelli).
 
 `veicoli.json`: i percorsi per animare i veicoli, senza e con lo sfasamento delle partenze. Ogni punto è `[ora, lat, lon]`.
 ```json

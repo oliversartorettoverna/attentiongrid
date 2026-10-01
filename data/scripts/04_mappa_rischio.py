@@ -45,6 +45,7 @@ def main():
         tratti[c] = tratti[c].astype(str).str.lower().isin(["true", "1", "yes"])
     meteo = pd.read_csv(PROCESSED / "meteo.csv")
     pioggia_ora = dict(zip(meteo["ora"].str[:2].astype(int), meteo["pioggia_mm"]))
+    nuvole_ora = dict(zip(meteo["ora"].str[:2].astype(int), meteo["nuvolosita_pct"]))
     sole = posizione_sole(data, fasce_min)
 
     righe = []
@@ -52,6 +53,7 @@ def main():
         piove = pioggia_ora.get(fm // 60, 0.0) > pesi["pioggia"]["soglia_mm_ora"]
         molt = pesi["pioggia"]["moltiplicatore"] if piove else 1.0
         elev, azim = sole[fm]
+        sole_visibile = nuvole_ora.get(fm // 60, 0.0) <= pesi["abbagliamento"]["nuvolosita_max_pct"]
         doppia_fila_ora = in_fasce(fm, pesi["doppia_fila"]["fasce"])
         scuola_ora = in_fasce(fm, pesi["scuola"]["fasce"])
 
@@ -62,7 +64,7 @@ def main():
             c_sc = pesi["scuola"]["contributo"] if (scuola_ora and t.scuola_vicina) else 0.0
             # la pioggia amplifica i tre fattori legati a pedoni e traffico
             c_meteo = (molt - 1.0) * (c_attr + c_df + c_sc)
-            abbaglia = 0 < elev < pesi["abbagliamento"]["altezza_sole_max_gradi"] and min(
+            abbaglia = sole_visibile and 0 < elev < pesi["abbagliamento"]["altezza_sole_max_gradi"] and min(
                 differenza_angolo(t.direzione_gradi, azim),
                 differenza_angolo((t.direzione_gradi + 180) % 360, azim),
             ) < pesi["abbagliamento"]["differenza_direzione_max_gradi"]

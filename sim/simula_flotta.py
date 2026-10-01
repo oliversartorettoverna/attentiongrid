@@ -13,7 +13,7 @@ Ipotesi (modificabili in config/scenario.yaml → flotte.boxi):
 - ogni giro ha N fermate su edifici veri, in ordine "vado alla più vicina";
 - velocità costante pari alla massima (25 km/h per BOXi), sosta fissa a ogni fermata.
 
-TODO Pela (giovedì 8/10, per il finale multi-flotta):
+TODO (giovedì 8/10, per il finale multi-flotta):
 - navette: 4 veicoli su un anello fisso di 6-8 incroci, 20 km/h, un giro dopo l'altro;
 - robot: 6 veicoli, viaggi brevi (2-3 fermate entro 500 m) a 6 km/h.
 Stesso formato, campo "flotta" = "navetta" / "robot".
@@ -51,6 +51,8 @@ def distanza(a, b):
 def trova_deposito():
     poi = gpd.read_file(RAW / "punti_interesse.geojson")
     poste = poi[poi["amenity"] == "post_office"]
+    # Gli uffici di Poste Vaticane (Stato del Vaticano) non sono di Poste Italiane
+    poste = poste[~poste["name"].fillna("").str.contains("vatican", case=False)]
     if poste.empty:
         return CENTRO_PRATI
     punti = [(g.y, g.x) for g in poste.geometry]
@@ -65,6 +67,9 @@ def main():
     fine_s = minuti(sc["giorno"]["fine"]) * 60
 
     G = ox.load_graphml(RAW / "strade.graphml")
+    # Solo la parte di rete dove da ogni incrocio si può andare e tornare: gli altri (tagliati dal
+    # bordo del riquadro o in fondo a sensi unici) renderebbero le fermate irraggiungibili
+    G = G.subgraph(max(nx.strongly_connected_components(G), key=len)).copy()
     tratti = gpd.read_file(PROCESSED / "tratti.geojson")
     seg_di = {(int(r.u), int(r.v)): r.seg_id for r in tratti.itertuples()}
 
