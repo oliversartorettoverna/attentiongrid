@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import attenzione  # noqa: E402
 from erlang import operatori_necessari  # noqa: E402
 from ottimizza import ottimizza  # noqa: E402
 from previsione import (avvisi, carica_giri, carica_nomi_vie, carica_rischio,  # noqa: E402
@@ -44,6 +45,24 @@ def percorsi_animazione(giri: list, sposta: dict, flotte: set) -> list:
         out.append({"veicolo_id": g["veicolo_id"], "flotta": g["flotta"],
                     "percorso": [[hms(sec(p["ora"]) + d), p["lat"], p["lon"]] for p in g["percorso"]]})
     return out
+
+
+def rischio_console(rischio: dict, rischio_path, inizio_s: int, fine_s: int, fascia_min: int, data: str) -> dict:
+    """Rischio di ogni tratto per fascia, in millesimi, per colorare le strade in console.
+    Aggiunge la pioggia per fascia se accanto a rischio.csv c'è meteo.csv."""
+    fasce = [hm(t) for t in range(inizio_s, fine_s, fascia_min * 60)]
+    indice = {f: i for i, f in enumerate(fasce)}
+    p = {}
+    for (seg, f), r in rischio.items():
+        if f in indice:
+            p.setdefault(seg, [0] * len(fasce))[indice[f]] = round(r["p_intervento"] * 1000)
+    pioggia = None
+    meteo = Path(rischio_path).with_name("meteo.csv")
+    if meteo.exists():
+        import csv
+        ore = {r["ora"][:2]: float(r["pioggia_mm"]) for r in csv.DictReader(open(meteo, encoding="utf-8"))}
+        pioggia = [ore.get(f[:2]) for f in fasce]
+    return {"data": data, "fasce": fasce, "pioggia_mm": pioggia, "p_millesimi": p}
 
 
 def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
@@ -95,6 +114,12 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
     parita = {"senza": blocco(ev_senza_pari, op_picco_senza),
               "con": blocco(ev_con, sum(piano_con) / len(piano_con))}
 
+    # 3c. Griglia dell'attenzione: livello di ogni veicolo minuto per minuto (scenario con sistema)
+    at = cfg["attenzione"]
+    stati = attenzione.livelli(pas_con, rischio, fascia, nomi, inizio_s, fine_s, at["orizzonte_min"] * 60,
+                               at["soglia_osservazione"], at["soglia_intervento"])
+    valid = attenzione.validazione(stati, req_con, inizio_s, at["anticipo_validazione_min"] * 60)
+
     # 4. Scrittura
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -106,10 +131,12 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
                            "con": {"richieste_attese": [round(x, 3) for x in curva_con], "operatori_necessari": piano_con,
                                    "operatori_in_turno": piano_con}})
     scrivi("avvisi.json", avvisi(pas_con, rischio, fascia, nomi))
+    scrivi("attenzione.json", attenzione.serializza(stati, inizio_s, at, valid))
     scrivi("rigioco.json", {"senza": ev_senza, "con": ev_con})
     scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "spostamenti_min": sposta})
     scrivi("veicoli.json", {"senza": percorsi_animazione(giri, {}, flotte),
                             "con": percorsi_animazione(giri, sposta, flotte)})
+    scrivi("rischio_console.json", rischio_console(rischio, rischio_path, inizio_s, fine_s, fascia, str(g.get("data", ""))))
     gj = json.load(open(tratti_path, encoding="utf-8"))
     for ft in gj["features"]:
         ft["properties"] = {"seg_id": ft["properties"]["seg_id"], "nome": ft["properties"].get("nome", "")}
@@ -122,6 +149,11 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
               f"attesa media={k['attesa_media_s']}s  fermi>60s={k['veicoli_fermi_oltre_60s']}  "
               f"operatori medi={k['operatori_medi']}  al picco={k['operatori_necessari_al_picco']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}")
+    v = valid
+    print(f"ATTENZIONE tempo in movimento: verde {v['tempo_pct']['verde']}% giallo {v['tempo_pct']['giallo']}% "
+          f"rosso {v['tempo_pct']['rosso']}% | richieste da verde {v['richieste_da_pct']['verde']}% "
+          f"giallo {v['richieste_da_pct']['giallo']}% rosso {v['richieste_da_pct']['rosso']}% | "
+          f"rosso/verde x{v['rosso_su_verde']}")
     for nome, k in parita.items():
         print(f"PARI {nome:5s} operatori medi={k['operatori_medi']}  ore operatore={k['ore_operatore']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}  attesa media={k['attesa_media_s']}s  "

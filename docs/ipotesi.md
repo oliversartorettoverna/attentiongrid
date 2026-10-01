@@ -39,6 +39,16 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 
 **Controllo di plausibilità (30/9, dati veri, 3 ottobre 2024).** Mediando su tutte le strade dell'area, un veicolo chiede aiuto circa 1 volta ogni 3,6 km alle 14:00 (senza pioggia forte), 1 ogni 1,4 km alle 16:30 (temporale e uscita scuole), 1 ogni 2,8 km alle 18:00. Cruise a San Francisco: 1 ogni 6,4–8 km. Siamo circa il doppio di Cruise fuori dal picco, coerente con un centro storico più denso di pedoni e con un veicolo meno maturo. Limite noto: un attraversamento su un incrocio viene contato da tutti i tratti che lo toccano.
 
+## Soglie della griglia dell'attenzione
+
+| Parametro | Valore | Stato | Da dove viene |
+|---|---|---|---|
+| Orizzonte | 3 minuti | scelta | Provati 2, 3 e 5 minuti: separano allo stesso modo (rosso circa 6 volte più richieste del verde); 3 lascia all'operatore 2 minuti di anticipo |
+| Soglia giallo | P ≥ 0,25 di almeno una richiesta nei prossimi 3 minuti | scelta | Circa la mediana del tempo in movimento nello scenario del 3/10/2024 |
+| Soglia rosso | P ≥ 0,45 | scelta | Circa l'80° percentile: il rosso copre un quinto del tempo |
+
+Nello scenario: i veicoli sono verdi il 45% del tempo in movimento, gialli il 34%, rossi il 21%; il 52% delle richieste arriva da un veicolo che 2 minuti prima era rosso, il 19% da uno verde. **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
+
 ## Scenario della demo
 
 | Parametro | Valore | Stato |
