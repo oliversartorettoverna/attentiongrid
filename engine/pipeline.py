@@ -158,6 +158,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte):
         print(f"PARI {nome:5s} operatori medi={k['operatori_medi']}  ore operatore={k['ore_operatore']}  "
               f"veicoli/operatore={k['veicoli_per_operatore']}  attesa media={k['attesa_media_s']}s  "
               f"entro {o['attesa_max_s']}s={k['entro_attesa_max_pct']}%")
+    return {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "attenzione": valid}
 
 
 if __name__ == "__main__":

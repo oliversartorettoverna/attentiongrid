@@ -49,6 +49,22 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 
 Nello scenario: i veicoli sono verdi il 45% del tempo in movimento, gialli il 34%, rossi il 21%; il 52% delle richieste arriva da un veicolo che 2 minuti prima era rosso, il 19% da uno verde. **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
 
+## Sensibilità: il risultato regge se i pesi sono sbagliati?
+
+`python tools/sensibilita.py` rifà rischio e motore cambiando un parametro alla volta (−50% e +50%) e poi tutti i pesi insieme. Risultati del 1/10 sullo scenario del 3/10/2024 (21 corse):
+
+| Cosa cambia | Risparmio di ore operatore a parità di servizio |
+|---|---|
+| Riferimento | 56% |
+| Ogni peso del rischio a −50% o +50%, uno alla volta | 46–57% (il più sensibile è la pioggia) |
+| Tutti i pesi insieme a −50% / +50% | 47% / 59% |
+| Durata media dell'intervento 45 s / 135 s | 49% / 57% |
+| Attesa massima 10 s / 30 s | 54% / 52% |
+
+Il risparmio resta tra **46% e 59%** in tutte le varianti: dipende dalla forma della curva (il picco previsto), non dal valore preciso dei pesi. Quello che cambia molto è il numero assoluto di richieste (148–513) e quindi i veicoli per operatore (2,2–4,7 con il sistema).
+
+**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Se i pesi veri fossero la metà, quasi nessun veicolo diventerebbe rosso (solo il 3% delle richieste arriverebbe da un rosso). Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
+
 ## Scenario della demo
 
 | Parametro | Valore | Stato |

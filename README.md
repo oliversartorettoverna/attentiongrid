@@ -64,6 +64,9 @@ python sim/simula_flotta.py                   # giri di consegna dei veicoli
 # 3. Motore
 python engine/pipeline.py                     # previsione, turni, ottimizzazione, rigioco → console/data/scenario/
 
+# Facoltativo: sensibilità dei risultati ai pesi (qualche minuto) → console/data/scenario/sensibilita.json
+python tools/sensibilita.py
+
 # 4. Demo
 python -m http.server 8000 --directory console
 # poi apri http://localhost:8000
@@ -86,6 +89,7 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 |---|---|
 | Struttura repo, formati, parametri | pronto |
 | Griglia dell'attenzione: livello verde/giallo/rosso per veicolo e minuto (`engine/attenzione.py`) | fatta, nel motore e in console |
+| Analisi di sensibilità (`tools/sensibilita.py`): risparmio di ore tra 46% e 59% con pesi a ±50% | fatta |
 | Console v2: strade che si accendono col rischio, previsione del picco, griglia, risultato finale, tasti per il palco | fatta; provata a 1920×1080 e 1440×900 |
 | Motore: previsione, Erlang C, sfasamento partenze, rigioco (`engine/`) | pronto, provato su dati finti |
 | Script dati 02 (tratti) | fatto sui dati veri: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
