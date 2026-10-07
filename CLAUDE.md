@@ -10,12 +10,12 @@ AttentionGrid, team di 5 al Safe Mobility Hack (Roma, 10–12 ottobre 2026), sfi
 - [00 LEGGIMI – Contesto progetto](https://docs.google.com/document/d/1HsAE_9wqXLRBD0W4tp1wM5lBaq8Z3Ve9ndZwquYFRvg/edit): idea, prove, business, piano
 - [01 Indicazioni](https://drive.google.com/drive/folders/1utUxprX7MMMd6rIOk_PhJcy3-JlSrJ9k): un documento per persona con i task giorno per giorno
 
-Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`sim/`), motore (`engine/`), console (`console/`), parametri (`config/`); **Gigi e Andrea** business e interviste; **Riccio** rilievo sul campo per validare le ipotesi (Scheda rilievo nel Drive, 03 Dati). Se chi ti scrive si presenta, segui il suo documento in 01 Indicazioni, un task alla volta e in ordine di data.
+Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`sim/`), motore (`engine/`), console (`console/`), parametri (`config/`); **Tommaso** business, numeri e mercato; **Andrea** interviste, normativa e pitch; **Riccio** rilievo sul campo per validare le ipotesi (Scheda rilievo nel Drive, 03 Dati). Se chi ti scrive si presenta, segui il suo documento in 01 Indicazioni, un compito alla volta.
 
 ## Come lavorare con la persona
 
 - Chi ti scrive vuole imparare, non solo avere il risultato. Prima di ogni comando scrivi in una riga cosa fa e perché. Niente gergo non spiegato.
-- Dopo ogni task mostra il risultato (numeri, file creati, errori) e di' cosa deve controllare con i suoi occhi. Il task è chiuso quando la persona conferma il "Fatto quando" del suo documento.
+- Dopo ogni task mostra il risultato (numeri, file creati, errori) e di' cosa deve controllare con i suoi occhi. Il compito è chiuso quando la persona ha controllato il risultato.
 - Se una cosa non funziona, spiega il problema prima di cambiare strada. Non aggirare un controllo che fallisce abbassando la soglia senza dirlo.
 - Le decisioni di merito (quale giorno di pioggia, quale soglia, quali colori) le prende la persona: proponi con i motivi, poi aspetta.
 - Password, token e login li inserisce sempre la persona. Non chiederli in chat e non scriverli in nessun file.
@@ -27,7 +27,8 @@ Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`si
 - `data/raw/` non si committa (è in `.gitignore`): i dati grezzi vanno zippati nel Drive, cartella 03 Dati.
 - Si committano gli output piccoli (`data/processed/`, `sim/out/giri.json`, `console/data/scenario*/`), solo se ogni file è sotto 20 MB.
 - Se cambi il formato di un file, aggiorna prima `docs/formati-dati.md`.
-- Ogni numero stimato o inventato va in `config/` e in `docs/ipotesi.md`, con scritto se è validato e da cosa (es. "tarato sul rilievo del 2/10").
+- Ogni numero stimato o inventato va in `config/` e in `docs/ipotesi.md`, con scritto se è validato e da cosa (es. "tarato sul rilievo in strada").
+- Niente scadenze né TODO nei file del repository: i documenti descrivono il prodotto com'è.
 - Non alzare i pesi del rischio per avere numeri più belli: in giuria si guarda la robustezza tecnica.
 - `engine/` e `console/` sono di Oliver: chi altro li modifica lo fa su un ramo e lo avvisa nel gruppo.
 

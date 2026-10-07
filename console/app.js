@@ -1,7 +1,6 @@
 // Console della demo. Legge i file prodotti da engine/pipeline.py (formati: docs/formati-dati.md).
 // Dati: ?dati=scenario (default, dati veri) oppure ?dati=esempio (dati finti di tools/genera_esempio.py).
 // Tasti: spazio avvia/ferma · 1 vai a poco prima del picco · ← → ±10 minuti · R risultato · F schermo intero.
-// TODO: finale multi-flotta (?dati=scenario_multiflotta).
 
 const NS = "http://www.w3.org/2000/svg";
 const COLORI = { boxi: "var(--boxi)", navetta: "var(--navetta)", robot: "var(--robot)" };

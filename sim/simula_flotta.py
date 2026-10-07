@@ -13,10 +13,8 @@ Ipotesi (modificabili in config/scenario.yaml → flotte.boxi):
 - ogni giro ha N fermate su edifici veri, in ordine "vado alla più vicina";
 - velocità costante pari alla massima (25 km/h per BOXi), sosta fissa a ogni fermata.
 
-TODO (giovedì 8/10, per il finale multi-flotta):
-- navette: 4 veicoli su un anello fisso di 6-8 incroci, 20 km/h, un giro dopo l'altro;
-- robot: 6 veicoli, viaggi brevi (2-3 fermate entro 500 m) a 6 km/h.
-Stesso formato, campo "flotta" = "navetta" / "robot".
+Simula solo i BOXi. Il formato di giri.json ha il campo "flotta", quindi accetta anche
+altre flotte (per esempio "navetta" o "robot") senza cambiare il motore.
 """
 import json
 import math

@@ -37,7 +37,7 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 | Sottopasso | sottovia stradale (OSM `tunnel=yes` su strade principali: Lungotevere, Galleria Principe Amedeo) e pioggia > 4 mm/h | 0,2 | Waymo sospende il servizio per allagamenti (mag. 2026) |
 | GPS in canyon urbano | rapporto altezza edifici / distanza tra le facciate > 1,5 (distanza misurata sulle piante OSM) | 0,005 | BOXi ha sensori inerziali: il GPS pesa poco |
 
-**Controllo di plausibilità (30/9, dati veri, 3 ottobre 2024).** Mediando su tutte le strade dell'area, un veicolo chiede aiuto circa 1 volta ogni 3,6 km alle 14:00 (senza pioggia forte), 1 ogni 1,4 km alle 16:30 (temporale e uscita scuole), 1 ogni 2,8 km alle 18:00. Cruise a San Francisco: 1 ogni 6,4–8 km. Siamo circa il doppio di Cruise fuori dal picco, coerente con un centro storico più denso di pedoni e con un veicolo meno maturo. Limite noto: un attraversamento su un incrocio viene contato da tutti i tratti che lo toccano.
+**Controllo di plausibilità (scenario del 3 ottobre 2024).** Mediando su tutte le strade dell'area, un veicolo chiede aiuto circa 1 volta ogni 3,6 km alle 14:00 (senza pioggia forte), 1 ogni 1,4 km alle 16:30 (temporale e uscita scuole), 1 ogni 2,8 km alle 18:00. Cruise a San Francisco: 1 ogni 6,4–8 km. Siamo circa il doppio di Cruise fuori dal picco, coerente con un centro storico più denso di pedoni e con un veicolo meno maturo. Limite noto: un attraversamento su un incrocio viene contato da tutti i tratti che lo toccano.
 
 ## Soglie della griglia dell'attenzione
 
@@ -51,7 +51,7 @@ Nello scenario: i veicoli sono verdi il 45% del tempo in movimento, gialli il 34
 
 ## Sensibilità: il risultato regge se i pesi sono sbagliati?
 
-`python tools/sensibilita.py` rifà rischio e motore cambiando un parametro alla volta (−50% e +50%) e poi tutti i pesi insieme. Risultati del 1/10 sullo scenario del 3/10/2024 (21 corse):
+`python tools/sensibilita.py` rifà rischio e motore cambiando un parametro alla volta (−50% e +50%) e poi tutti i pesi insieme. Risultati sullo scenario del 3 ottobre 2024 (21 corse):
 
 | Cosa cambia | Risparmio di ore operatore a parità di servizio |
 |---|---|
