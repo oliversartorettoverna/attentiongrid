@@ -9,7 +9,7 @@ Stato: **validato** = da fonte o misura; **da validare** = stima nostra, da conf
 | Parametro | Valore | Stato | Da dove viene / come validarlo |
 |---|---|---|---|
 | Velocità massima BOXi | 25 km/h | validato | Scheda BOXi (Poste, feb. 2026) |
-| Durata media di un intervento remoto | 90 s | da validare | Chiedere nelle interviste (domanda 1) |
+| Durata media di un intervento remoto | 90 s | prudente | Cruise implica meno di un minuto (vedi sotto); da confermare nelle interviste |
 | Tempo massimo di attesa accettabile | 20 s | da validare | Cruise: 98% delle richieste gestite entro 3 s (robotaxi). Per un veicolo lento che si ferma in sicurezza assumiamo 20 s |
 | Livello di servizio | 90% delle richieste entro il tempo massimo | scelta | Standard dei call center |
 | Persone per coprire una postazione 24/7 | circa 5 (da 4,2 a 5,4) | validato | Regola dei call center (Call Centre Helper) |
@@ -18,26 +18,31 @@ Stato: **validato** = da fonte o misura; **da validare** = stima nostra, da conf
 
 ## Rischio di intervento
 
-Il rischio di un tratto in una fascia è la probabilità che un veicolo che lo percorre chieda aiuto. Si combina così:
+Il rischio di un tratto in una fascia è la probabilità che un veicolo che lo percorre chieda aiuto. I fattori si combinano come cause indipendenti:
 
 ```
 p = 1 − (1 − p_base) × Π (1 − c_i)
 ```
 
-dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contributi di attraversamenti, doppia fila e scuola. **Tutti i pesi sono da validare**: sono ordini di grandezza per far funzionare la demo, e lo diciamo nel pitch.
+cioè il veicolo non chiede aiuto solo se non lo chiede per nessuno dei motivi. Così il totale non supera mai 1; con contributi piccoli il risultato è quasi la somma (0,02 e 0,03 danno 0,049). La pioggia forte non è un motivo a sé: moltiplica i contributi di attraversamenti, doppia fila e scuola.
 
-| Fattore | Quando si attiva | Contributo iniziale | Base |
+Stato: **tarato** = scelto perché il modello riproduca un dato pubblico; **dal rilievo** = misurato da noi in strada (`data/rilievo/`); **da letteratura** = valore preso da uno studio; **stima** = nostra, con impatto sul risultato misurato dalla sensibilità.
+
+| Fattore | Quando si attiva | Valore | Stato e fonte |
 |---|---|---|---|
-| Base | sempre | 0,002 | stima |
-| Attraversamenti | per ogni attraversamento sul tratto | 0,008 | Starship: aiuto umano in circa il 15% degli attraversamenti (robot da marciapiede) |
-| Doppia fila | densità negozi ≥ 10 per 100 m (un terzo dei tratti) e fascia 08–10 o 16–19:30 | 0,02 | soglia scelta il 30/9 sui dati OSM (con 3 si accendeva sul 60% dei tratti); da tarare sul rilievo di Riccio |
-| Scuola | scuola entro 100 m e fascia 16:00–17:00 (tempo pieno) o 12:30–14:00 | 0,03 | da misurare nel rilievo di Riccio |
-| Pioggia forte | pioggia > 4 mm/h | moltiplica per 1,8 i tre fattori sopra | stima |
-| Abbagliamento | sole sotto 15° di altezza, allineato con la strada (differenza < 20°) e nuvolosità ≤ 70% | 0,02 | NHTSA indaga Tesla per sole basso, nebbia, polvere |
-| Sottopasso | sottovia stradale (OSM `tunnel=yes` su strade principali: Lungotevere, Galleria Principe Amedeo) e pioggia > 4 mm/h | 0,2 | Waymo sospende il servizio per allagamenti (mag. 2026) |
-| GPS in canyon urbano | rapporto altezza edifici / distanza tra le facciate > 1,5 (distanza misurata sulle piante OSM) | 0,005 | BOXi ha sensori inerziali: il GPS pesa poco |
+| Attraversamenti | per ogni striscia o semaforo pedonale sul tratto, moltiplicato per i pedoni stimati | 0,0048 per attraversamento in una via tipica | **tarato**: con questo valore, nel pomeriggio senza pioggia forte né scuole, i BOXi chiedono aiuto una volta ogni 7,2 km, come Cruise a San Francisco (una ogni 4–5 miglia, [CNBC 2023](https://www.cnbc.com/2023/11/06/cruise-confirms-robotaxis-rely-on-human-assistance-every-4-to-5-miles.html)). `python tools/taratura.py` |
+| Pedoni | moltiplicano il rischio degli attraversamenti | pedoni in 5 min ≈ 25 + 1,51 × negozi/100 m, diviso 32,6 (via tipica); oltre 31 negozi/100 m non si estrapola | **dal rilievo**: 7 vie, correlazione pedoni–negozi +0,82 |
+| Doppia fila | distanza tra le facciate ≥ 20 m e fascia 08–10 o 16–19:30 | 0,02 | soglia **dal rilievo**: auto in doppia fila correlate con la larghezza della via (+0,86), non con i negozi (−0,71); vie larghe 9 auto in media, strette 3. Il contributo resta una **stima** |
+| Scuola | scuola entro 100 m (OSM + anagrafe del Ministero) e fascia 12:30–14:00 o 16:00–17:00 | 0,03 | **stima**; l'elenco delle scuole viene dal Ministero perché OSM mancava 3 scuole su 4 viste nel rilievo |
+| Pioggia forte | pioggia > 4 mm/h | moltiplica per 1,7 i tre fattori sopra | **da letteratura**: con la pioggia gli incidenti aumentano in media del 71% (meta-analisi di 34 studi, [Qiu e Nixon 2008](https://journals.sagepub.com/doi/10.3141/2055-16)). È un dato sui guidatori umani, usato come approssimazione |
+| Base | sempre | 0,002 | **stima**: blocchi non spiegati dagli altri fattori; impatto trascurabile (sensibilità) |
+| Sottopasso | sottovia stradale (OSM `tunnel=yes` su strade principali) e pioggia > 4 mm/h | 0,2 | **stima** (Waymo sospende il servizio per allagamenti, mag. 2026); impatto trascurabile sul risultato |
+| GPS in canyon urbano | altezza edifici / distanza tra le facciate > 1,5 | 0,005 | **stima** (BOXi ha sensori inerziali); impatto trascurabile |
+| Abbagliamento | sole sotto 15°, allineato con la strada (< 20°) e nuvolosità ≤ 70% | 0,02 | **stima** (NHTSA indaga Tesla per sole basso); nel 3/10/2024 il cielo è coperto e vale zero |
 
-**Controllo di plausibilità (scenario del 3 ottobre 2024).** Mediando su tutte le strade dell'area, un veicolo chiede aiuto circa 1 volta ogni 3,6 km alle 14:00 (senza pioggia forte), 1 ogni 1,4 km alle 16:30 (temporale e uscita scuole), 1 ogni 2,8 km alle 18:00. Cruise a San Francisco: 1 ogni 6,4–8 km. Siamo circa il doppio di Cruise fuori dal picco, coerente con un centro storico più denso di pedoni e con un veicolo meno maturo. Limite noto: un attraversamento su un incrocio viene contato da tutti i tratti che lo toccano.
+**Rilievo in strada (`data/rilievo/rilievo_prati_trastevere.csv`).** 8 vie, 2 e 5 ottobre 2026, 16:00–17:30: auto in doppia fila lungo il tratto, pedoni che attraversano in 5 minuti, scuole e uscita in corso. Limiti: una misura per via e nessuna misura fuori dall'orario di uscita, quindi l'effetto della scuola non si può separare da quello della via. Via Ottaviano e Via della Lungaretta sono pedonali e servono solo per la regola dei pedoni.
+
+**Durata degli interventi.** Cruise dichiara assistenza remota per il 2–4% del tempo, con una richiesta ogni 4–5 miglia: ne deriva una durata media sotto il minuto. I nostri 90 s sono quindi prudenti.
 
 ## Soglie della griglia dell'attenzione
 
@@ -47,7 +52,7 @@ dove `c_i` è il contributo di ciascun fattore. Pioggia forte moltiplica i contr
 | Soglia giallo | P ≥ 0,25 di almeno una richiesta nei prossimi 3 minuti | scelta | Circa la mediana del tempo in movimento nello scenario del 3/10/2024 |
 | Soglia rosso | P ≥ 0,45 | scelta | Circa l'80° percentile: il rosso copre un quinto del tempo |
 
-Nello scenario: i veicoli sono verdi il 45% del tempo in movimento, gialli il 34%, rossi il 21%; il 52% delle richieste arriva da un veicolo che 2 minuti prima era rosso, il 19% da uno verde. **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
+Nello scenario: i veicoli sono verdi il 48% del tempo in movimento, gialli il 29%, rossi il 22%; il 54% delle richieste arriva da un veicolo che 2 minuti prima era rosso, il 17% da uno verde (un rosso chiede aiuto 6,7 volte più spesso di un verde). **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
 
 ## Sensibilità: il risultato regge se i pesi sono sbagliati?
 
@@ -55,15 +60,15 @@ Nello scenario: i veicoli sono verdi il 45% del tempo in movimento, gialli il 34
 
 | Cosa cambia | Risparmio di ore operatore a parità di servizio |
 |---|---|
-| Riferimento | 56% |
-| Ogni peso del rischio a −50% o +50%, uno alla volta | 46–57% (il più sensibile è la pioggia) |
-| Tutti i pesi insieme a −50% / +50% | 47% / 59% |
-| Durata media dell'intervento 45 s / 135 s | 49% / 57% |
-| Attesa massima 10 s / 30 s | 54% / 52% |
+| Riferimento | 51% |
+| Ogni peso del rischio a −50% o +50%, uno alla volta | 49–58% |
+| Tutti i pesi insieme a −50% / +50% | 50% / 59% |
+| Durata media dell'intervento 45 s / 135 s | 50% / 57% |
+| Attesa massima 10 s / 30 s | 55% / 53% |
 
-Il risparmio resta tra **46% e 59%** in tutte le varianti: dipende dalla forma della curva (il picco previsto), non dal valore preciso dei pesi. Quello che cambia molto è il numero assoluto di richieste (148–513) e quindi i veicoli per operatore (2,2–4,7 con il sistema).
+Il risparmio resta tra **49% e 59%** in tutte le varianti: dipende dalla forma della curva (il picco previsto), non dal valore preciso dei pesi. Quello che cambia molto è il numero assoluto di richieste (133–501) e quindi i veicoli per operatore (2,2–4,8 con il sistema).
 
-**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Se i pesi veri fossero la metà, quasi nessun veicolo diventerebbe rosso (solo il 3% delle richieste arriverebbe da un rosso). Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
+**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Se i pesi veri fossero la metà, quasi nessun veicolo diventerebbe rosso (solo il 7% delle richieste arriverebbe da un rosso). Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
 
 ## Scenario della demo
 
@@ -80,4 +85,5 @@ Il risparmio resta tra **46% e 59%** in tutte le varianti: dipende dalla forma d
 | Dato | Situazione | Cosa usiamo |
 |---|---|---|
 | Altezza edifici | In OSM solo 470 edifici su 5.598 hanno altezza o numero di piani | Copernicus Urban Atlas Building Height 2012 (satellite, celle di 10 m, precisione verticale 3 m) per 4.991 edifici; 15 m di riserva solo per 137 edifici (76 tratti su 1.769) |
-| Via Ottaviano | In OSM è pedonale: i BOXi non ci passano. Il rilievo di Riccio lì misura i pedoni ma non entra nella mappa del rischio | Da valutare se sostituirla nella Scheda rilievo con una via carrabile |
+| Scuole | OSM ha 26 scuole nell'area e non conosceva 3 delle 4 viste nel rilievo | Anagrafe del Ministero dell'Istruzione 2025/26 (statali e paritarie, senza corsi serali), geolocalizzata dall'indirizzo: 44 sedi; 117 indirizzi su 136 trovati |
+| Scuola su Via di S. Francesco a Ripa | Il rilievo indica l'IC Giovan Battista Vico, che nell'anagrafe non risulta in quella zona | Da chiarire con chi ha fatto il rilievo |

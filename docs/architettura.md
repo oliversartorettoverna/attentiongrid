@@ -30,7 +30,7 @@ flowchart LR
 
 **5. Ottimizzazione** (`engine/ottimizza.py`). Sposta di qualche minuto le partenze (entro un limite) per abbassare il picco della curva. Versione semplice: algoritmo greedy che prova per ogni veicolo gli spostamenti da −10 a +10 minuti e tiene quello che abbassa di più il massimo.
 
-**6. Rigioco** (`engine/rigioco.py`). Estrae a caso le richieste vere dalle probabilità (stesso seme per i due casi), le mette in coda davanti agli operatori e misura attese e veicoli fermi, senza e con il sistema. Produce i numeri finali.
+**6. Rigioco** (`engine/rigioco.py`). Estrae a caso le richieste vere dalle probabilità (stesso seme per i due casi), le mette in coda davanti agli operatori e misura attese e blocchi in coda, senza e con il sistema. Produce i numeri finali.
 
 **7. Console** (`console/`). Pagina web statica. Disegna le strade dal GeoJSON (niente mappe online), anima i veicoli, mostra i due pannelli affiancati, la coda degli avvisi e i numeri finali.
 

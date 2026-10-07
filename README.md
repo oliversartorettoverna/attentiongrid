@@ -59,7 +59,9 @@ python data/scripts/01_scarica_osm.py        # strade, edifici, punti di interes
 python data/scripts/02_costruisci_tratti.py  # tratti di strada con altezza edifici, attraversamenti, negozi, scuole
 python data/scripts/03_meteo.py              # meteo orario del giorno scelto (Open-Meteo)
 python data/scripts/05_altezze_copernicus.py # facoltativo, prima di 02: altezza edifici da satellite (serve una chiave Copernicus)
+python data/scripts/06_scuole_ministero.py   # facoltativo, prima di 02: scuole dall'anagrafe del Ministero
 python data/scripts/04_mappa_rischio.py      # rischio per tratto di strada e fascia oraria
+python tools/taratura.py                     # controlla il peso degli attraversamenti sul dato di Cruise
 
 # 2. Simulazione
 python sim/simula_flotta.py                   # giri di consegna dei veicoli
@@ -92,10 +94,11 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 |---|---|
 | Dati OSM (`01`) | 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
 | Meteo (`03`) | giovedì 3 ottobre 2024, pioggia forte 16–18 |
-| Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, altezze da satellite (Copernicus), 9 sottovia |
-| Mappa del rischio (`04`) | picco 16:00–17:30 |
+| Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, altezze da satellite (Copernicus), scuole dal Ministero, 9 sottovia |
+| Mappa del rischio (`04`) | pesi tarati su Cruise, sul rilievo in strada e sulla letteratura; picco 16:00–17:30 |
+| Rilievo in strada (`data/rilievo/`) | 8 vie di Prati e Trastevere: doppia fila, pedoni, scuole |
 | Simulatore BOXi (`sim/`) | 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
-| Motore (`engine/`) | −56% ore operatore a parità di servizio, da 1,3 a 3 veicoli per operatore |
-| Griglia dell'attenzione (`engine/attenzione.py`) | il rosso anticipa il 52% delle richieste |
-| Sensibilità (`tools/sensibilita.py`) | risparmio tra 46% e 59% con pesi a ±50% |
+| Motore (`engine/`) | −51% ore operatore a parità di servizio, da 1,5 a 3,1 veicoli per operatore |
+| Griglia dell'attenzione (`engine/attenzione.py`) | il rosso anticipa il 54% delle richieste |
+| Sensibilità (`tools/sensibilita.py`) | risparmio tra 49% e 59% con pesi a ±50% |
 | Console (`console/`) | strade colorate dal rischio, previsione del picco, griglia, risultato, tasti per il palco |

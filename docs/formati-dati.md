@@ -124,7 +124,7 @@ Quello che la console legge. Stessa struttura in `console/data/esempio/` (dati f
   "spostamenti_min": {"boxi_01": 6, "boxi_02": -4}
 }
 ```
-Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`.
+Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`. `veicoli_fermi_oltre_60s` conta le **richieste** (blocchi) che hanno aspettato più di 60 s, non i veicoli distinti.
 
 `parita_servizio` confronta i due casi **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno per tutto il pomeriggio gli operatori necessari al picco non previsto, `con` segue il piano di Erlang C sulla curva prevista e sfasata. Ogni blocco ha `operatori_medi`, `ore_operatore`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`. I blocchi `senza`/`con` sopra restano il rigioco con `operatori_senza_sistema` fissi (quello animato nei pannelli).
 

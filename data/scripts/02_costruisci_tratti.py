@@ -165,8 +165,13 @@ def main():
     conta = gpd.sjoin(commerciali[["geometry"]], fasce, predicate="within").groupby("seg_id").size()
     m["densita_negozi"] = (m["seg_id"].map(conta).fillna(0) / (m["lunghezza_m"].clip(lower=20) / 100)).round(2)
 
-    # Scuola entro 100 m
-    scuole = poi[poi["amenity"].isin(["school", "kindergarten"])]
+    # Scuola entro 100 m: scuole OSM più l'anagrafe del Ministero (06_scuole_ministero.py), se c'è.
+    # Il rilievo in strada ha mostrato che OSM da solo ne manca molte.
+    scuole = poi[poi["amenity"].isin(["school", "kindergarten"])][["geometry"]]
+    if (PROCESSED / "scuole.geojson").exists():
+        ministero = gpd.read_file(PROCESSED / "scuole.geojson").to_crs(CRS_METRICO)[["geometry"]]
+        scuole = pd.concat([scuole, ministero], ignore_index=True)
+        print(f"Scuole: {len(scuole) - len(ministero)} da OSM, {len(ministero)} dal Ministero")
     fasce["geometry"] = m.buffer(100)
     con_scuola = set(gpd.sjoin(scuole[["geometry"]], fasce, predicate="within")["seg_id"])
     m["scuola_vicina"] = m["seg_id"].isin(con_scuola)
