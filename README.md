@@ -58,6 +58,7 @@ pip install -r requirements.txt
 python data/scripts/01_scarica_osm.py        # strade, edifici, punti di interesse dell'area
 python data/scripts/02_costruisci_tratti.py  # tratti di strada con altezza edifici, attraversamenti, negozi, scuole
 python data/scripts/03_meteo.py              # meteo orario del giorno scelto (Open-Meteo)
+python data/scripts/05_altezze_copernicus.py # facoltativo, prima di 02: altezza edifici da satellite (serve una chiave Copernicus)
 python data/scripts/04_mappa_rischio.py      # rischio per tratto di strada e fascia oraria
 
 # 2. Simulazione
@@ -91,7 +92,7 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 |---|---|
 | Dati OSM (`01`) | 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
 | Meteo (`03`) | giovedì 3 ottobre 2024, pioggia forte 16–18 |
-| Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
+| Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, altezze da satellite (Copernicus), 9 sottovia |
 | Mappa del rischio (`04`) | picco 16:00–17:30 |
 | Simulatore BOXi (`sim/`) | 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
 | Motore (`engine/`) | −56% ore operatore a parità di servizio, da 1,3 a 3 veicoli per operatore |

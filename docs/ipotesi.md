@@ -79,5 +79,5 @@ Il risparmio resta tra **46% e 59%** in tutte le varianti: dipende dalla forma d
 
 | Dato | Situazione | Cosa usiamo |
 |---|---|---|
-| Altezza edifici | In OSM solo 66 edifici su 5.598 hanno `height` e 452 `building:levels` (download del 30/9) | Valore di riserva 15 m dove manca, finché non si integra EUBUCCO. Il rapporto canyon (GPS) è quindi poco affidabile |
+| Altezza edifici | In OSM solo 470 edifici su 5.598 hanno altezza o numero di piani | Copernicus Urban Atlas Building Height 2012 (satellite, celle di 10 m, precisione verticale 3 m) per 4.991 edifici; 15 m di riserva solo per 137 edifici (76 tratti su 1.769) |
 | Via Ottaviano | In OSM è pedonale: i BOXi non ci passano. Il rilievo di Riccio lì misura i pedoni ma non entra nella mappa del rischio | Da valutare se sostituirla nella Scheda rilievo con una via carrabile |

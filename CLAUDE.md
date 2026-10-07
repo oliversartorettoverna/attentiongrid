@@ -18,7 +18,7 @@ Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`si
 - Dopo ogni task mostra il risultato (numeri, file creati, errori) e di' cosa deve controllare con i suoi occhi. Il compito è chiuso quando la persona ha controllato il risultato.
 - Se una cosa non funziona, spiega il problema prima di cambiare strada. Non aggirare un controllo che fallisce abbassando la soglia senza dirlo.
 - Le decisioni di merito (quale giorno di pioggia, quale soglia, quali colori) le prende la persona: proponi con i motivi, poi aspetta.
-- Password, token e login li inserisce sempre la persona. Non chiederli in chat e non scriverli in nessun file.
+- Chiavi, token e password non vanno mai nel repository. Se la persona fornisce una chiave, usala tenendola fuori dal repository (file temporaneo o variabile d'ambiente) e cancellala dopo l'uso.
 - Se la tua rete non raggiunge un servizio (Overpass di OpenStreetMap, Open-Meteo, EUBUCCO), non insistere: dai alla persona il comando esatto da lanciare nel suo terminale.
 
 ## Regole del repository
