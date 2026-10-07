@@ -16,3 +16,10 @@ cache/
 .DS_Store
 Thumbs.db
 .env
+
+# Chiavi e credenziali: mai nel repository
+chiave*.json
+*.pem
+*.key
+*_key.json
+service_key*.json

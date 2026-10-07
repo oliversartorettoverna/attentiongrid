@@ -1,7 +1,6 @@
 // Console della demo. Legge i file prodotti da engine/pipeline.py (formati: docs/formati-dati.md).
 // Dati: ?dati=scenario (default, dati veri) oppure ?dati=esempio (dati finti di tools/genera_esempio.py).
 // Tasti: spazio avvia/ferma · 1 vai a poco prima del picco · ← → ±10 minuti · R risultato · F schermo intero.
-// TODO: finale multi-flotta (?dati=scenario_multiflotta).
 
 const NS = "http://www.w3.org/2000/svg";
 const COLORI = { boxi: "var(--boxi)", navetta: "var(--navetta)", robot: "var(--robot)" };
@@ -226,7 +225,7 @@ async function avvia() {
   // Numeri in basso, sempre visibili
   const k = d.kpi, pari = k.parita_servizio;
   const numeri = [
-    ["Veicoli fermi oltre 60 s", k.senza.veicoli_fermi_oltre_60s, k.con.veicoli_fermi_oltre_60s, 0],
+    ["Blocchi con attesa oltre 1 min", k.senza.veicoli_fermi_oltre_60s, k.con.veicoli_fermi_oltre_60s, 0],
     ["Attesa media", `${k.senza.attesa_media_s} s`, `${k.con.attesa_media_s} s`],
     ...(pari ? [["Veicoli per operatore · stesso servizio", virgola(pari.senza.veicoli_per_operatore), virgola(pari.con.veicoli_per_operatore)],
                 ["Ore operatore · stesso servizio", virgola(pari.senza.ore_operatore), virgola(pari.con.ore_operatore)]]
@@ -243,7 +242,7 @@ async function avvia() {
       [`−${risparmio}%`, "ore operatore", `${virgola(pari.senza.ore_operatore)} → ${virgola(pari.con.ore_operatore)} ore nel pomeriggio, stesso livello di servizio` +
         (d.sensibilita ? `<br><b style="color:var(--previsto)">tra −${d.sensibilita.intervalli.risparmio_ore_pct[0]}% e −${d.sensibilita.intervalli.risparmio_ore_pct[1]}% con i pesi del rischio a ±50%</b>` : "")],
       [`×${virgola(molt)}`, "veicoli per operatore", `da ${virgola(pari.senza.veicoli_per_operatore)} a ${virgola(pari.con.veicoli_per_operatore)}`],
-      [`${k.con.veicoli_fermi_oltre_60s}`, "veicoli fermi oltre un minuto", `invece di ${k.senza.veicoli_fermi_oltre_60s} con ${d.carico.senza.operatori_in_turno[0]} operatori fissi`],
+      [`${k.con.veicoli_fermi_oltre_60s}`, "blocchi con attesa oltre un minuto", `invece di ${k.senza.veicoli_fermi_oltre_60s} con ${d.carico.senza.operatori_in_turno[0]} operatori fissi`],
     ].map(([g, c, da]) => `<div><div class="grande">${g}</div><div class="cosa">${c}</div><div class="da">${da}</div></div>`).join("");
     el("ris-nota").textContent = `Livello di servizio: ${pari.con.entro_attesa_max_pct}% (con) e ${pari.senza.entro_attesa_max_pct}% (senza) delle richieste gestite entro 20 s. ` +
       "Rischio calcolato da dati aperti (OpenStreetMap, Open-Meteo); i pesi sono stime da validare." +

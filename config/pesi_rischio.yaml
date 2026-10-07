@@ -1,14 +1,19 @@
-# Pesi della mappa del rischio. TUTTI DA VALIDARE: vedi docs/ipotesi.md.
+# Pesi della mappa del rischio. Fonte e stato di ogni valore: docs/ipotesi.md.
 # p = 1 - (1 - base) * prodotto(1 - contributo_i)
 
 base: 0.002
 
 attraversamenti:
-  per_attraversamento: 0.008
+  per_attraversamento: 0.0048       # tarato con tools/taratura.py su Cruise (1 richiesta ogni 4,5 miglia)
+  pedoni:                           # dal rilievo in strada (data/rilievo/): pedoni in 5 min ≈ intercetta + per_negozio × negozi/100 m
+    intercetta: 25.0
+    per_negozio: 1.51
+    riferimento: 32.6               # pedoni di una via tipica dell'area (densità mediana, 5 negozi/100 m)
+    densita_max_rilievo: 31.0       # oltre la densità più alta misurata non si estrapola
 
 doppia_fila:
   contributo: 0.02
-  soglia_densita_negozi: 10.0       # negozi/locali entro 50 m per 100 m di strada; 1/3 dei tratti (da tarare sul rilievo)
+  distanza_facciate_min_m: 20.0     # rilievo: vie larghe 9 auto in doppia fila, strette 3 (correlazione +0,86 con la larghezza)
   fasce: [["08:00", "10:00"], ["16:00", "19:30"]]
 
 scuola:
@@ -18,7 +23,7 @@ scuola:
 
 pioggia:
   soglia_mm_ora: 4.0
-  moltiplicatore: 1.8               # si applica ad attraversamenti, doppia fila, scuola
+  moltiplicatore: 1.7               # +71% di incidenti con la pioggia (Qiu e Nixon 2008); si applica ad attraversamenti, doppia fila, scuola
 
 abbagliamento:
   contributo: 0.02

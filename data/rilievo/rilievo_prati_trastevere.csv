@@ -1,0 +1,9 @@
+quartiere,via,tratto,data,ora_inizio,ora_fine,auto_doppia_fila,pedoni_5_min,scuola_vista,uscita_scuola,cantieri,piove,foto
+Prati,Via Cola di Rienzo,Piazza Risorgimento – Piazza Cola di Rienzo,02/10/2026,16:05,16:25,9,42,"Sì, Ist. Comprensivo Dante Alighieri",Sì,No,No,
+Prati,Via Ottaviano,Piazza Risorgimento – Viale Giulio Cesare,02/10/2026,16:28,16:48,2,85,No,No,No,No,
+Prati,Viale Giulio Cesare,Via Ottaviano – Via Lepanto,02/10/2026,16:50,17:10,8,30,"Sì, Liceo Classico Tacito",Sì,No,No,
+Prati,Via Crescenzio,Piazza Risorgimento – Piazza Cavour,02/10/2026,17:12,17:30,7,28,No,No,No,No,
+Trastevere,Viale di Trastevere,Piazza Sidney Sonnino – Piazza Mastai,05/10/2026,16:00,16:20,12,55,"Sì, Scuola Primaria Regina Margherita",Sì,No,No,
+Trastevere,Via della Lungaretta,Piazza Sidney Sonnino – Piazza di Santa Maria in Trastevere,05/10/2026,16:23,16:43,1,95,No,No,No,No,
+Trastevere,Via della Scala,Piazza di Sant'Egidio – Porta Settimiana,05/10/2026,16:45,17:05,2,60,No,No,No,No,
+Trastevere,Via di San Francesco a Ripa,Viale di Trastevere – Piazza di San Francesco d'Assisi,05/10/2026,17:08,17:28,6,38,"Sì, Ist. Comprensivo Giovan Battista Vico",Sì,No,No,

@@ -6,9 +6,9 @@ Uso:
 
 Prima serve 01_scarica_osm.py. Il formato di output è in docs/formati-dati.md (sezione 1).
 
-Altezza edifici: usa OSM (`height`, oppure `building:levels` × 3,2 m). Dove OSM non ha il dato
-usa ALTEZZA_DEFAULT_M. Se vuoi dati migliori, scarica EUBUCCO per il Lazio (eubucco.com),
-salvalo come data/raw/eubucco_lazio.gpkg e imposta USA_EUBUCCO = True.
+Altezza edifici: usa OSM (`height`, oppure `building:levels` × 3,2 m). Dove OSM non ha il dato usa
+l'altezza da satellite di Copernicus (se c'è data/raw/copernicus/, vedi 05_altezze_copernicus.py),
+e solo se manca anche quella ALTEZZA_DEFAULT_M.
 """
 import math
 
@@ -26,8 +26,6 @@ CRS_METRICO = "EPSG:32633"      # UTM 33N, in metri, va bene per Roma
 ALTEZZA_DEFAULT_M = 15.0        # palazzina tipica del centro di Roma quando manca il dato
 RAGGIO_FACCIATE_M = 40.0        # oltre questa distanza un lato della strada conta come aperto (fiume, piazza)
 PASSO_CAMPIONI_M = 10.0         # ogni quanti metri si misura la distanza tra le facciate
-USA_EUBUCCO = False
-
 STRADE_PRINCIPALI = {"trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link"}
 
 # Larghezza stimata in metri per tipo di strada OSM, quando manca il tag `width`
@@ -60,6 +58,25 @@ def altezza_edificio(riga):
     if piani and 0 < piani < 40:
         return piani * 3.2
     return np.nan
+
+
+def altezze_copernicus(edifici_metrici) -> pd.Series:
+    """Altezza da satellite per ogni edificio: mediana delle celle non nulle in un quadrato 3×3
+    (30 m) attorno al centro dell'edificio. NaN se il file Copernicus non c'è o la zona è vuota."""
+    tif = sorted((RAW / "copernicus").rglob("*.tif"))
+    if not tif:
+        return pd.Series(np.nan, index=edifici_metrici.index)
+    import rasterio
+    from rasterio.windows import Window
+    with rasterio.open(tif[0]) as r:
+        centri = edifici_metrici.geometry.representative_point().to_crs(r.crs)
+        out = []
+        for c in centri:
+            riga, col = r.index(c.x, c.y)
+            v = r.read(1, window=Window(col - 1, riga - 1, 3, 3), boundless=True, fill_value=0).astype(float)
+            v = v[(v > 0) & (v < 200)]
+            out.append(float(np.median(v)) if v.size else np.nan)
+    return pd.Series(out, index=edifici_metrici.index)
 
 
 def direzione(geom_wgs84):
@@ -117,10 +134,12 @@ def main():
 
     # Altezza edifici entro 25 m dal tratto
     edifici = gpd.read_file(RAW / "edifici.geojson").to_crs(CRS_METRICO)
-    if USA_EUBUCCO:
-        # TODO: sostituire/integrare le altezze con EUBUCCO (colonna `height`)
-        raise NotImplementedError("Integrazione EUBUCCO da fare")
     edifici["h"] = edifici.apply(altezza_edificio, axis=1)
+    da_osm = edifici["h"].notna()
+    edifici["h"] = edifici["h"].fillna(altezze_copernicus(edifici))
+    da_cop = edifici["h"].notna() & ~da_osm
+    print(f"Altezze: {da_osm.sum()} da OSM, {da_cop.sum()} da Copernicus, "
+          f"{edifici['h'].isna().sum()} senza dato (riserva {ALTEZZA_DEFAULT_M} m)")
     fasce = m[["seg_id", "geometry"]].copy()
     fasce["geometry"] = fasce.buffer(25)
     vicini = gpd.sjoin(edifici[["h", "geometry"]], fasce, predicate="intersects")
@@ -146,16 +165,21 @@ def main():
     conta = gpd.sjoin(commerciali[["geometry"]], fasce, predicate="within").groupby("seg_id").size()
     m["densita_negozi"] = (m["seg_id"].map(conta).fillna(0) / (m["lunghezza_m"].clip(lower=20) / 100)).round(2)
 
-    # Scuola entro 100 m
-    scuole = poi[poi["amenity"].isin(["school", "kindergarten"])]
+    # Scuola entro 100 m: scuole OSM più l'anagrafe del Ministero (06_scuole_ministero.py), se c'è.
+    # Il rilievo in strada ha mostrato che OSM da solo ne manca molte.
+    scuole = poi[poi["amenity"].isin(["school", "kindergarten"])][["geometry"]]
+    if (PROCESSED / "scuole.geojson").exists():
+        ministero = gpd.read_file(PROCESSED / "scuole.geojson").to_crs(CRS_METRICO)[["geometry"]]
+        scuole = pd.concat([scuole, ministero], ignore_index=True)
+        print(f"Scuole: {len(scuole) - len(ministero)} da OSM, {len(ministero)} dal Ministero")
     fasce["geometry"] = m.buffer(100)
     con_scuola = set(gpd.sjoin(scuole[["geometry"]], fasce, predicate="within")["seg_id"])
     m["scuola_vicina"] = m["seg_id"].isin(con_scuola)
 
-    # TODO: marcare come `sottopasso` anche i punti bassi che si allagano
-    # (modello di elevazione Copernicus + lista sottopassi di Roma), non solo i tunnel OSM.
+    # Limite: sono sottopassi solo i sottovia mappati in OSM; i punti bassi che si allagano
+    # senza essere tunnel non sono inclusi.
 
-    m["fonte_dati"] = "osm"
+    m["fonte_dati"] = "osm+copernicus" if da_cop.any() else "osm"
     colonne = ["seg_id", "u", "v", "nome", "lunghezza_m", "larghezza_m", "distanza_facciate_m", "altezza_edifici_m", "rapporto_canyon",
                "direzione_gradi", "attraversamenti", "densita_negozi", "scuola_vicina", "sottopasso",
                "fonte_dati", "geometry"]

@@ -33,11 +33,18 @@ def differenza_angolo(a, b):
 
 def carica_tratti():
     tratti = gpd.read_file(PROCESSED / "tratti.geojson")
-    for c in ["rapporto_canyon", "direzione_gradi", "attraversamenti", "densita_negozi"]:
+    for c in ["rapporto_canyon", "direzione_gradi", "attraversamenti", "densita_negozi", "distanza_facciate_m"]:
         tratti[c] = pd.to_numeric(tratti[c], errors="coerce").fillna(0.0)
     for c in ["scuola_vicina", "sottopasso"]:
         tratti[c] = tratti[c].astype(str).str.lower().isin(["true", "1", "yes"])
     return tratti
+
+
+def moltiplicatore_pedoni(densita_negozi: float, ped: dict) -> float:
+    """Quanti pedoni attraversano rispetto a una via tipica, dalla regola del rilievo in strada:
+    pedoni in 5 min ≈ intercetta + per_negozio × negozi/100 m. Non si estrapola oltre il rilievo."""
+    d = min(densita_negozi, ped["densita_max_rilievo"])
+    return (ped["intercetta"] + ped["per_negozio"] * d) / ped["riferimento"]
 
 
 def calcola(tratti, meteo, sc: dict, pesi: dict) -> pd.DataFrame:
@@ -60,9 +67,12 @@ def calcola(tratti, meteo, sc: dict, pesi: dict) -> pd.DataFrame:
         scuola_ora = in_fasce(fm, pesi["scuola"]["fasce"])
 
         for t in tratti.itertuples():
-            c_attr = min(0.5, t.attraversamenti * pesi["attraversamenti"]["per_attraversamento"])
+            at = pesi["attraversamenti"]
+            c_attr = min(0.5, t.attraversamenti * at["per_attraversamento"]
+                         * moltiplicatore_pedoni(t.densita_negozi, at["pedoni"]))
+            # doppia fila dove la strada è abbastanza larga da permetterla (rilievo: conta la larghezza, non i negozi)
             c_df = pesi["doppia_fila"]["contributo"] if (
-                doppia_fila_ora and t.densita_negozi >= pesi["doppia_fila"]["soglia_densita_negozi"]) else 0.0
+                doppia_fila_ora and t.distanza_facciate_m >= pesi["doppia_fila"]["distanza_facciate_min_m"]) else 0.0
             c_sc = pesi["scuola"]["contributo"] if (scuola_ora and t.scuola_vicina) else 0.0
             # la pioggia amplifica i tre fattori legati a pedoni e traffico
             c_meteo = (molt - 1.0) * (c_attr + c_df + c_sc)

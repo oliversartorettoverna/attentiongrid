@@ -8,11 +8,12 @@ Il contesto completo (idea, prove, business model, piano, ruoli) è nel [Drive d
 
 ## Cosa mostra la demo
 
-Roma, Prati e Trastevere, un pomeriggio feriale con temporale e uscita delle scuole. 12 BOXi (i veicoli autonomi di Poste) fanno consegne; un solo operatore li supervisiona.
+Roma, Prati e Trastevere, giovedì 3 ottobre 2024: un pomeriggio vero con temporale e uscita delle scuole. 12 BOXi (i veicoli autonomi di Poste) fanno consegne.
 
-- **Pannello sinistro, senza sistema:** le richieste di aiuto arrivano tutte insieme, si forma una coda, i veicoli restano fermi.
-- **Pannello destro, con AttentionGrid:** il picco è previsto in anticipo, le partenze sono sfasate, le zone critiche evitate, e la console dice quanti operatori servono.
-- **Finale:** nella stessa console compaiono veicoli di tre flotte diverse (BOXi, navette, robot da marciapiede), seguiti dagli stessi operatori.
+- **Pannello sinistro, senza previsione:** 3 operatori fissi; le richieste di aiuto arrivano tutte insieme, si forma una coda, i veicoli restano fermi.
+- **Pannello destro, con AttentionGrid:** le strade si colorano con il rischio previsto, il picco è annunciato in anticipo, le partenze sono sfasate e gli operatori in turno seguono il piano.
+- **Griglia dell'attenzione:** ogni veicolo verde, giallo o rosso secondo il rischio dei prossimi minuti, con via e motivo.
+- **Risultato:** ore operatore e veicoli per operatore a parità di servizio, con l'intervallo di robustezza sui pesi.
 
 ## Come funziona (pipeline)
 
@@ -29,8 +30,9 @@ data/scripts  →  data/processed  →  sim  →  engine  →  console
 | `data/scripts/` | Scarica e prepara i dati aperti (OSM, altezza edifici, meteo) e calcola la mappa del rischio |
 | `data/processed/` | Output piccoli della pipeline dati (versionati) |
 | `sim/` | Simula i giri di consegna dei veicoli sulle strade vere |
-| `engine/` | Previsione degli interventi, calcolo turni (Erlang C), sfasamento partenze, rigioco dello scenario con e senza sistema |
-| `console/` | Pagina web della demo: mappa, due pannelli, coda di avvisi, numeri finali |
+| `engine/` | Previsione degli interventi, calcolo turni (Erlang C), sfasamento partenze, griglia dell'attenzione, rigioco dello scenario con e senza sistema |
+| `console/` | Pagina web della demo: due mappe, griglia dell'attenzione, curva delle richieste, risultato |
+| `tools/` | Dati di esempio e analisi di sensibilità |
 | `docs/` | Architettura, formati dei file, ipotesi e parametri |
 
 Tutta la parte tecnica (dati, simulazione, motore, console) è seguita da Oliver. Riccio fa il rilievo in strada che serve a tarare la mappa del rischio.
@@ -56,7 +58,10 @@ pip install -r requirements.txt
 python data/scripts/01_scarica_osm.py        # strade, edifici, punti di interesse dell'area
 python data/scripts/02_costruisci_tratti.py  # tratti di strada con altezza edifici, attraversamenti, negozi, scuole
 python data/scripts/03_meteo.py              # meteo orario del giorno scelto (Open-Meteo)
+python data/scripts/05_altezze_copernicus.py # facoltativo, prima di 02: altezza edifici da satellite (serve una chiave Copernicus)
+python data/scripts/06_scuole_ministero.py   # facoltativo, prima di 02: scuole dall'anagrafe del Ministero
 python data/scripts/04_mappa_rischio.py      # rischio per tratto di strada e fascia oraria
+python tools/taratura.py                     # controlla il peso degli attraversamenti sul dato di Cruise
 
 # 2. Simulazione
 python sim/simula_flotta.py                   # giri di consegna dei veicoli
@@ -83,21 +88,17 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 - Se cambi un formato di file, aggiorna prima `docs/formati-dati.md` e avvisa nel gruppo.
 - Ogni numero inventato o stimato va in `config/` e in `docs/ipotesi.md`, con scritto se è validato o no.
 
-## Stato (1 ottobre)
+## Cosa c'è
 
-| Pezzo | Stato |
+| Pezzo | Risultato |
 |---|---|
-| Dati OSM (`01`) | fatto: 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
-| Meteo (`03`) | fatto: giovedì 3 ottobre 2024, pioggia forte 16–18 |
-| Tratti (`02`) | fatto: 1.769 tratti, canyon misurato tra le facciate, 9 sottovia |
-| Mappa del rischio (`04`) | fatto: picco 16:00–17:30 |
-| Simulatore BOXi (`sim/`) | fatto: 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
-| Motore: previsione, Erlang C, sfasamento, rigioco, parità di servizio (`engine/`) | fatto: −56% ore operatore, da 1,3 a 3 veicoli per operatore |
-| Griglia dell'attenzione (`engine/attenzione.py`) | fatto: il rosso anticipa il 52% delle richieste |
-| Sensibilità (`tools/sensibilita.py`) | fatto: risparmio tra 46% e 59% con pesi a ±50% |
-| Console | fatto: strade che si accendono, previsione del picco, griglia, risultato, tasti per il palco |
-| Finale a tre flotte con pooling degli operatori | da fare |
-| Curva di scalabilità (12 → 200 veicoli) | da fare |
-| Percorsi che evitano le strade rosse | da fare |
-| Dati satellitari Copernicus (punti che si allagano), altezze EUBUCCO | da fare |
-| Taratura sul rilievo di Riccio (2 e 5 ottobre) | in attesa della Scheda rilievo |
+| Dati OSM (`01`) | 960 incroci, 1.772 tratti, 5.598 edifici, 1.547 attraversamenti |
+| Meteo (`03`) | giovedì 3 ottobre 2024, pioggia forte 16–18 |
+| Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, altezze da satellite (Copernicus), scuole dal Ministero, 9 sottovia |
+| Mappa del rischio (`04`) | pesi tarati su Cruise, sul rilievo in strada e sulla letteratura; picco 16:00–17:30 |
+| Rilievo in strada (`data/rilievo/`) | 8 vie di Prati e Trastevere: doppia fila, pedoni, scuole |
+| Simulatore BOXi (`sim/`) | 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
+| Motore (`engine/`) | −51% ore operatore a parità di servizio, da 1,5 a 3,1 veicoli per operatore |
+| Griglia dell'attenzione (`engine/attenzione.py`) | il rosso anticipa il 54% delle richieste |
+| Sensibilità (`tools/sensibilita.py`) | risparmio tra 49% e 59% con pesi a ±50% |
+| Console (`console/`) | strade colorate dal rischio, previsione del picco, griglia, risultato, tasti per il palco |

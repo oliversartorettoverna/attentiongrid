@@ -2,8 +2,8 @@
 il picco delle richieste attese. Algoritmo greedy, semplice e spiegabile in una frase:
 "proviamo per ogni veicolo tutti gli spostamenti ammessi e teniamo quello che abbassa di più il picco".
 
-TODO Oliver (se c'è tempo): aggiungere percorsi alternativi (evitare i tratti rossi nelle fasce rosse)
-e confrontare con un modello di programmazione lineare (min del massimo) con OR-Tools.
+Limiti: cambia solo l'orario di partenza, non il percorso; non garantisce la soluzione ottima
+(un modello di programmazione lineare che minimizza il massimo la darebbe).
 """
 from previsione import curva_richieste, media_mobile, passate
 
