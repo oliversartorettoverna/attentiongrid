@@ -65,6 +65,38 @@ def per_turni(piano: list, turni: list, inizio_s: int) -> list:
     return out
 
 
+def blocchi_uguali(piano: list) -> list:
+    """Gli intervalli [i, j) di minuti in cui il piano ha lo stesso numero di operatori."""
+    out, i = [], 0
+    for j in range(1, len(piano) + 1):
+        if j == len(piano) or piano[j] != piano[i]:
+            out.append((i, j))
+            i = j
+    return out
+
+
+def rispetta_servizio(piano: list, richieste: list, blocchi: list, inizio_s: int, attesa_max_s: float,
+                      livello: float, minimo_richieste: int = 20, giri_max: int = 30) -> list:
+    """Erlang presuppone richieste sparse; con molti veicoli sulle stesse strade arrivano a grappoli.
+    Si verifica il piano nel rigioco e, nei blocchi dove meno del `livello` delle richieste è preso
+    entro `attesa_max_s`, si aggiunge un operatore, finché tutti i blocchi rispettano il servizio.
+    I blocchi con meno di `minimo_richieste` richieste non decidono da soli (troppo poche per una percentuale)."""
+    piano = list(piano)
+    n = len(piano)
+    for _ in range(giri_max):
+        eventi = simula_coda(richieste, lambda t: piano[min(n - 1, max(0, int((t - inizio_s) // 60)))])
+        da_alzare = []
+        for i, j in blocchi:
+            attese = [e["attesa_s"] for e in eventi if i <= (sec(e["ora"]) - inizio_s) // 60 < j]
+            if len(attese) >= minimo_richieste and sum(a <= attesa_max_s for a in attese) < livello * len(attese):
+                da_alzare.append((i, j))
+        if not da_alzare:
+            break
+        for i, j in da_alzare:
+            piano[i:j] = [x + 1 for x in piano[i:j]]
+    return piano
+
+
 def intervalli_servizio(g: dict) -> list:
     """Intervalli [inizio, fine] in secondi in cui il veicolo è in servizio (in movimento o fermo a una
     consegna); le pause più lunghe di SOSTA_MAX_S non contano."""
@@ -193,14 +225,21 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     nec_con = piano_operatori(curva_con, fascia, *args_op)
     nec_asciutto = piano_operatori(curva_asciutta, fascia, *args_op)
     turni = o.get("turni", [[g["inizio"], g["fine"]]])
-    turno_fisso = per_turni(nec_asciutto, turni, inizio_s)         # senza previsione: turni da giornata asciutta
-    picco_costante = [max(nec_senza)] * n_min                       # senza previsione, a parità di servizio
-    turni_sul_picco = per_turni(nec_senza, turni, inizio_s)         # senza previsione, turni sul picco di ogni turno
-    turno_con = a_blocchi(nec_con, o.get("blocco_turno_min", 60))    # con AttentionGrid
-
-    # 3. Rigioco con numeri casuali comuni
     req_senza = estrai_richieste(pas_senza, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
     req_con = estrai_richieste(pas_con, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
+    servizio = (inizio_s, o["attesa_max_s"], o["livello_servizio"])
+    # senza previsione, colto di sorpresa: turni da giornata asciutta, volutamente non corretti (pannello animato)
+    turno_fisso = per_turni(nec_asciutto, turni, inizio_s)
+    # i tre piani a confronto, tutti verificati nel rigioco: il servizio promesso è rispettato davvero
+    picco_costante = rispetta_servizio([max(nec_senza)] * n_min, req_senza, [(0, n_min)], *servizio)
+    turni_sul_picco = per_turni(nec_senza, turni, inizio_s)
+    turni_sul_picco = rispetta_servizio(turni_sul_picco, req_senza, blocchi_uguali(turni_sul_picco), *servizio)
+    blocco_min = o.get("blocco_turno_min", 60)
+    turno_con = a_blocchi(nec_con, blocco_min)
+    turno_con = rispetta_servizio(turno_con, req_con, [(i, min(i + blocco_min, n_min)) for i in range(0, n_min, blocco_min)],
+                                  *servizio)
+
+    # 3. Rigioco con numeri casuali comuni
 
     def in_turno(piano):
         return lambda t: piano[min(n_min - 1, max(0, int((t - inizio_s) // 60)))]
