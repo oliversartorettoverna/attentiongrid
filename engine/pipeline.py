@@ -75,21 +75,31 @@ def blocchi_uguali(piano: list) -> list:
     return out
 
 
-def rispetta_servizio(piano: list, richieste: list, blocchi: list, inizio_s: int, attesa_max_s: float,
-                      livello: float, minimo_richieste: int = 20, giri_max: int = 30) -> list:
+def rispetta_servizio(piano: list, giornate: list, blocchi: list, inizio_s: int, attesa_max_s: float,
+                      livello: float, minimo_richieste: int = 20, giri_max: int = 30,
+                      quota_giornate: float = 0.9) -> list:
     """Erlang presuppone richieste sparse; con molti veicoli sulle stesse strade arrivano a grappoli.
-    Si verifica il piano nel rigioco e, nei blocchi dove meno del `livello` delle richieste è preso
-    entro `attesa_max_s`, si aggiunge un operatore, finché tutti i blocchi rispettano il servizio.
+    Si prova il piano su più giornate simulate dalla previsione (`giornate`: liste di richieste estratte
+    con semi diversi, mai quella vera) e, nei blocchi dove meno del `livello` delle richieste è preso
+    entro `attesa_max_s` in più di (1 − `quota_giornate`) delle giornate, si aggiunge un operatore,
+    finché ogni blocco rispetta il servizio in almeno `quota_giornate` delle giornate simulate.
     I blocchi con meno di `minimo_richieste` richieste non decidono da soli (troppo poche per una percentuale)."""
     piano = list(piano)
     n = len(piano)
     for _ in range(giri_max):
-        eventi = simula_coda(richieste, lambda t: piano[min(n - 1, max(0, int((t - inizio_s) // 60)))])
-        da_alzare = []
-        for i, j in blocchi:
-            attese = [e["attesa_s"] for e in eventi if i <= (sec(e["ora"]) - inizio_s) // 60 < j]
-            if len(attese) >= minimo_richieste and sum(a <= attesa_max_s for a in attese) < livello * len(attese):
-                da_alzare.append((i, j))
+        sotto = {b: 0 for b in blocchi}                  # in quante giornate il blocco resta sotto il livello
+        for richieste in giornate:
+            attese_blocco = {b: [] for b in blocchi}
+            for e in simula_coda(richieste, lambda t: piano[min(n - 1, max(0, int((t - inizio_s) // 60)))]):
+                m = (sec(e["ora"]) - inizio_s) // 60
+                for b in blocchi:
+                    if b[0] <= m < b[1]:
+                        attese_blocco[b].append(e["attesa_s"])
+                        break
+            for b, attese in attese_blocco.items():
+                if len(attese) >= minimo_richieste and sum(a <= attesa_max_s for a in attese) < livello * len(attese):
+                    sotto[b] += 1
+        da_alzare = [b for b, k in sotto.items() if k > (1 - quota_giornate) * len(giornate) + 1e-9]
         if not da_alzare:
             break
         for i, j in da_alzare:
@@ -227,17 +237,24 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     turni = o.get("turni", [[g["inizio"], g["fine"]]])
     req_senza = estrai_richieste(pas_senza, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
     req_con = estrai_richieste(pas_con, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
-    servizio = (inizio_s, o["attesa_max_s"], o["livello_servizio"])
+    servizio = (inizio_s, o["attesa_max_s"], o["livello_servizio"], 20, 30, rg.get("quota_giornate", 0.9))
+    # il piano si fa su giornate simulate dalla previsione (semi diversi da quello del rigioco):
+    # chi pianifica conosce le probabilità, non le richieste che arriveranno davvero
+    semi = range(rg["seme"] + 1, rg["seme"] + 1 + rg.get("giornate_pianificazione", 10))
+    giornate_senza = [estrai_richieste(pas_senza, rischio, fascia, s_, o["durata_media_intervento_s"]) for s_ in semi]
+    giornate_con = [estrai_richieste(pas_con, rischio, fascia, s_, o["durata_media_intervento_s"]) for s_ in semi]
     # senza previsione, colto di sorpresa: turni da giornata asciutta, volutamente non corretti (pannello animato)
     turno_fisso = per_turni(nec_asciutto, turni, inizio_s)
     # i tre piani a confronto, tutti verificati nel rigioco: il servizio promesso è rispettato davvero
-    picco_costante = rispetta_servizio([max(nec_senza)] * n_min, req_senza, [(0, n_min)], *servizio)
+    picco_costante = rispetta_servizio([max(nec_senza)] * n_min, giornate_senza, [(0, n_min)], *servizio)
     turni_sul_picco = per_turni(nec_senza, turni, inizio_s)
-    turni_sul_picco = rispetta_servizio(turni_sul_picco, req_senza, blocchi_uguali(turni_sul_picco), *servizio)
+    turni_sul_picco = rispetta_servizio(turni_sul_picco, giornate_senza, blocchi_uguali(turni_sul_picco), *servizio)
     blocco_min = o.get("blocco_turno_min", 60)
     turno_con = a_blocchi(nec_con, blocco_min)
-    turno_con = rispetta_servizio(turno_con, req_con, [(i, min(i + blocco_min, n_min)) for i in range(0, n_min, blocco_min)],
-                                  *servizio)
+    ore_blocchi = [(i, min(i + blocco_min, n_min)) for i in range(0, n_min, blocco_min)]
+    turno_con = rispetta_servizio(turno_con, giornate_con, ore_blocchi, *servizio)
+    # solo turni: personale dalla previsione, partenze del cliente invariate
+    solo_turni = rispetta_servizio(a_blocchi(nec_senza, blocco_min), giornate_senza, ore_blocchi, *servizio)
 
     # 3. Rigioco con numeri casuali comuni
 
@@ -248,6 +265,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     ev_con = simula_coda(req_con, in_turno(turno_con))
     ev_picco = simula_coda(req_senza, in_turno(picco_costante))
     ev_turni_picco = simula_coda(req_senza, in_turno(turni_sul_picco))
+    ev_solo_turni = simula_coda(req_senza, in_turno(solo_turni))
     kpi_senza = kpi(ev_senza, n_veicoli, float(np.mean(turno_fisso)), max(nec_senza))
     kpi_con = kpi(ev_con, n_veicoli, float(np.mean(turno_con)), max(nec_con))
 
@@ -262,7 +280,13 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     def blocco(eventi, piano, attivi):
         attese = [e["attesa_s"] for e in eventi] or [0]
         ore_op, ore_veic = sum(piano) / 60, float(attivi.sum()) / 60
+        peggiore = 100.0
+        for i in range(0, n_min, 60):
+            a = [e["attesa_s"] for e in eventi if i <= (sec(e["ora"]) - inizio_s) // 60 < i + 60]
+            if len(a) >= 20:
+                peggiore = min(peggiore, 100 * sum(x <= o["attesa_max_s"] for x in a) / len(a))
         b = {"operatori_medi": round(float(np.mean(piano)), 1), "ore_operatore": round(ore_op, 1),
+             "ora_peggiore_entro_attesa_max_pct": round(peggiore),
              "ore_veicolo": round(ore_veic, 1),
              "veicoli_per_operatore": round(ore_veic / max(ore_op, 1e-9), 1),
              "attesa_media_s": round(sum(attese) / len(attese)),
@@ -275,6 +299,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
 
     parita = {"senza": blocco(ev_picco, picco_costante, attivi_senza),
               "senza_turni": blocco(ev_turni_picco, turni_sul_picco, attivi_senza),
+              "solo_turni": blocco(ev_solo_turni, solo_turni, attivi_senza),
               "con": blocco(ev_con, turno_con, attivi_con)}
 
     orario = []
@@ -383,7 +408,8 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
           f"| rosso/verde x{v['rosso_su_verde']}")
     for nome, k in parita.items():
         print(f"PARI {nome:12s} operatori medi={k['operatori_medi']:5}  ore operatore={k['ore_operatore']:6}  "
-              f"veicoli/operatore={k['veicoli_per_operatore']:5}  entro {o['attesa_max_s']}s={k['entro_attesa_max_pct']}%"
+              f"veicoli/operatore={k['veicoli_per_operatore']:5}  entro {o['attesa_max_s']}s={k['entro_attesa_max_pct']}% "
+              f"(ora peggiore {k['ora_peggiore_entro_attesa_max_pct']}%)"
               + (f"  costo €{k['costo_veicolo_mese']}/veicolo/mese  margine {k['margine_pct']}%" if euro_ora else ""))
     print(f"{'FLOTTA':24s} {'veicoli':>7s} {'ore serv./veic.':>15s} {'richieste/veic.':>15s} {'% tempo assist.':>15s} "
           f"{'ore operatore':>13s} {'veic./operatore':>15s}" + (f" {'€/veic./mese':>12s} {'€/ora serv.':>11s}" if euro_ora else ""))

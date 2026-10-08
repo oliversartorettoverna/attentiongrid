@@ -83,4 +83,6 @@ ottimizzazione:
 
 rigioco:
   seme: 42                    # stesso seme per "senza" e "con"
+  giornate_pianificazione: 20 # il piano dei turni si prova su 20 giornate simulate dalla previsione, mai su quella del rigioco
+  quota_giornate: 0.95        # ogni ora deve rispettare il servizio in almeno il 95% delle giornate simulate
   operatori_senza_sistema: 3  # pannello animato: operatori fissi senza previsione (il confronto del pitch è a parità di servizio)
