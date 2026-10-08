@@ -70,6 +70,23 @@ operatori:
   livello_servizio: 0.90
   blocco_turno_min: 60      # con la previsione gli operatori in turno cambiano al massimo una volta l'ora
   turni: [["06:00", "14:00"], ["14:00", "22:00"], ["22:00", "24:00"]]   # turni fissi di una centrale senza previsione
+  prudenza_min: 60          # piano prudente senza meteo: ogni picco si copre da un'ora prima a un'ora dopo (con il meteo si rifà il piano con il temporale anticipato e ritardato di un'ora)
+
+tempo_reale:                # leve in tempo reale sopra il piano (tutte con preavvisi realistici)
+  orizzonte_min: 15                    # carico atteso nei prossimi 15 minuti (strade che i veicoli stanno per fare)
+  preavviso_meteo_min: 120             # aggiornamento meteo e radar: le condizioni vere sono note 2 ore prima
+  quota_misti: 0.25                    # leva 1: un quarto degli operatori in turno fa back-office...
+  passaggio_misti_min: 1               # ...e passa alla supervisione in 1 minuto
+  prolungamento_max_min: 60            # leva 2: chi finisce il turno può restare fino a un'ora in più,
+  prolungamento_preavviso_min: 30      # deciso con almeno 30 minuti di preavviso,
+  maggiorazione_straordinario: 0.25    # pagato il 25% in più
+  reperibili_per_turno: 2              # leva 3: persone in reperibilità per ogni turno fisso,
+  reperibilita_preavviso_min: 45       # operative 45 minuti dopo la chiamata,
+  reperibilita_durata_min_min: 120     # per almeno 2 ore;
+  indennita_reperibilita_quota: 0.15   # indennità per ogni ora di reperibilità, come quota del costo orario (stima)
+  ritardo_partenze_max_min: 10         # leva 4: partenze delle consegne ritardate al massimo di 10 minuti
+  sosta_max_min: 10                    # e soste prima delle vie più a rischio al massimo di 10 minuti a veicolo
+  quota_vie_rischio: 0.05              # "vie più a rischio" = il 5% dei tratti con la probabilità più alta in quella fascia
 
 attenzione:
   orizzonte_min: 3              # quanto avanti guarda il livello di ogni veicolo

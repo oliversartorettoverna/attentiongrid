@@ -65,6 +65,33 @@ def per_turni(piano: list, turni: list, inizio_s: int) -> list:
     return out
 
 
+def rischio_pioggia_spostata(rischio_path, config_path, ore: int) -> dict | None:
+    """Il rischio ricalcolato con la pioggia prevista spostata di `ore` (per il piano prudente).
+    None se non ci sono i dati per ricalcolarlo (per esempio con i dati di esempio)."""
+    cartella = Path(rischio_path).parent
+    if not (cartella / "meteo.csv").exists() or not (cartella / "tratti.geojson").exists():
+        return None
+    import importlib.util
+    import pandas as pd
+    spec = importlib.util.spec_from_file_location("mappa_rischio", RADICE / "data/scripts/04_mappa_rischio.py")
+    mr = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(RADICE / "data" / "scripts"))
+    spec.loader.exec_module(mr)
+    meteo = pd.read_csv(cartella / "meteo.csv")
+    meteo["pioggia_mm"] = meteo["pioggia_mm"].shift(ore).fillna(0.0)
+    sc = yaml.safe_load(open(config_path, encoding="utf-8"))
+    pesi = yaml.safe_load(open(RADICE / "config/pesi_rischio.yaml", encoding="utf-8"))
+    df = mr.calcola(mr.carica_tratti(), meteo, sc, pesi)
+    return {(r.pop("seg_id"), r.pop("fascia")): r for r in df.to_dict("records")}
+
+
+def prudente(piano: list, minuti: int) -> list:
+    """Piano prudente: in ogni minuto il massimo che serve da `minuti` prima a `minuti` dopo,
+    così un picco che arriva in anticipo o in ritardo sulla previsione trova già gli operatori."""
+    n = len(piano)
+    return [max(piano[max(0, i - minuti):min(n, i + minuti + 1)]) for i in range(n)]
+
+
 def blocchi_uguali(piano: list) -> list:
     """Gli intervalli [i, j) di minuti in cui il piano ha lo stesso numero di operatori."""
     out, i = [], 0
@@ -77,28 +104,29 @@ def blocchi_uguali(piano: list) -> list:
 
 def rispetta_servizio(piano: list, giornate: list, blocchi: list, inizio_s: int, attesa_max_s: float,
                       livello: float, minimo_richieste: int = 20, giri_max: int = 30,
-                      quota_giornate: float = 0.9) -> list:
+                      quota_giornate: float = 0.9, controllo_min: int = 60) -> list:
     """Erlang presuppone richieste sparse; con molti veicoli sulle stesse strade arrivano a grappoli.
     Si prova il piano su più giornate simulate dalla previsione (`giornate`: liste di richieste estratte
     con semi diversi, mai quella vera) e, nei blocchi dove meno del `livello` delle richieste è preso
     entro `attesa_max_s` in più di (1 − `quota_giornate`) delle giornate, si aggiunge un operatore,
     finché ogni blocco rispetta il servizio in almeno `quota_giornate` delle giornate simulate.
+    Il servizio si controlla ora per ora (`controllo_min`); se un'ora non regge si alza tutto il blocco
+    che la contiene, cioè la parte di piano che si può cambiare (l'ora, il turno o la giornata).
     I blocchi con meno di `minimo_richieste` richieste non decidono da soli (troppo poche per una percentuale)."""
     piano = list(piano)
     n = len(piano)
     for _ in range(giri_max):
-        sotto = {b: 0 for b in blocchi}                  # in quante giornate il blocco resta sotto il livello
+        sotto = {b: 0 for b in blocchi}                  # in quante giornate il blocco ha un'ora sotto il livello
         for richieste in giornate:
-            attese_blocco = {b: [] for b in blocchi}
+            attese_ora = {}
             for e in simula_coda(richieste, lambda t: piano[min(n - 1, max(0, int((t - inizio_s) // 60)))]):
-                m = (sec(e["ora"]) - inizio_s) // 60
-                for b in blocchi:
-                    if b[0] <= m < b[1]:
-                        attese_blocco[b].append(e["attesa_s"])
+                attese_ora.setdefault((sec(e["ora"]) - inizio_s) // 60 // controllo_min, []).append(e["attesa_s"])
+            for b in blocchi:
+                for h in range(b[0] // controllo_min, (b[1] - 1) // controllo_min + 1):
+                    attese = attese_ora.get(h, [])
+                    if len(attese) >= minimo_richieste and sum(a <= attesa_max_s for a in attese) < livello * len(attese):
+                        sotto[b] += 1
                         break
-            for b, attese in attese_blocco.items():
-                if len(attese) >= minimo_richieste and sum(a <= attesa_max_s for a in attese) < livello * len(attese):
-                    sotto[b] += 1
         da_alzare = [b for b, k in sotto.items() if k > (1 - quota_giornate) * len(giornate) + 1e-9]
         if not da_alzare:
             break
@@ -250,9 +278,20 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     turni_sul_picco = per_turni(nec_senza, turni, inizio_s)
     turni_sul_picco = rispetta_servizio(turni_sul_picco, giornate_senza, blocchi_uguali(turni_sul_picco), *servizio)
     blocco_min = o.get("blocco_turno_min", 60)
-    turno_con = a_blocchi(nec_con, blocco_min)
     ore_blocchi = [(i, min(i + blocco_min, n_min)) for i in range(0, n_min, blocco_min)]
+    # con AttentionGrid: piano prudente. Si rifà il piano con il temporale previsto anticipato e ritardato
+    # di un'ora (ricalcolando il rischio: la pioggia sull'uscita da scuola pesa più della somma delle due)
+    # e si tiene il massimo; senza meteo si allarga ogni picco di `prudenza_min` prima e dopo
+    varianti = [rischio_pioggia_spostata(rischio_path, config_path, d) for d in (-1, 1)]
+    if all(v is not None for v in varianti):
+        piani = [a_blocchi(nec_con, blocco_min)] + [
+            a_blocchi(piano_operatori(curva_richieste(pas_con, v, inizio_s, fine_s, fascia), fascia, *args_op), blocco_min)
+            for v in varianti]
+        turno_con = [max(x) for x in zip(*piani)]
+    else:
+        turno_con = a_blocchi(prudente(nec_con, o.get("prudenza_min", 0)), blocco_min)
     turno_con = rispetta_servizio(turno_con, giornate_con, ore_blocchi, *servizio)
+
     # solo turni: personale dalla previsione, partenze del cliente invariate
     solo_turni = rispetta_servizio(a_blocchi(nec_senza, blocco_min), giornate_senza, ore_blocchi, *servizio)
 
