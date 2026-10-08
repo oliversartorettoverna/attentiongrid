@@ -249,6 +249,46 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
                        "veicoli_per_operatore_senza": round(v_s / op_s, 1),
                        "veicoli_per_operatore_con": round(v_c / op_c, 1)})
 
+    # 4b. Per flotta: il lavoro che ogni flotta dà agli operatori (richieste attese × durata), ora per ora,
+    # divide gli operatori della centrale; da qui ore operatore, veicoli per operatore e costo di ogni flotta
+    per_flotta = {}
+    ore_servizio = {}
+    for x in giri:
+        ore_servizio[x["flotta"]] = ore_servizio.get(x["flotta"], 0.0) + \
+            sum(b - a for a, b in intervalli_servizio(x)) / 3600
+    curve_f = {f: np.array(curva_richieste([q for q in pas_con if q.flotta == f], rischio, inizio_s, fine_s, fascia))
+               for f in sorted(flotte)}
+    attivi_f = {f: veicoli_attivi([x for x in giri if x["flotta"] == f], sposta, inizio_s, n_min) for f in curve_f}
+    totale_curva = sum(curve_f.values())
+    richieste_reali = {f: 0 for f in curve_f}
+    flotta_di = {x["veicolo_id"]: x["flotta"] for x in giri}
+    for e in ev_con:
+        richieste_reali[flotta_di[e["veicolo_id"]]] += 1
+    for f, cf in curve_f.items():
+        n_f = sum(1 for x in giri if x["flotta"] == f)
+        ore_op_f, righe = 0.0, []
+        for i in range(0, n_min, 60):
+            sl = slice(i, i + 60)
+            quota = float(cf[sl].sum() / totale_curva[sl].sum()) if totale_curva[sl].sum() > 0 else 0.0
+            op = float(np.mean(turno_con[sl])) * quota
+            ore_op_f += op
+            v = float(attivi_f[f][sl].mean())
+            righe.append({"ora": hm(inizio_s + i * 60), "veicoli": round(v, 1), "quota_lavoro_pct": round(100 * quota),
+                          "operatori": round(op, 2), "veicoli_per_operatore": round(v / op, 1) if op > 0 else None})
+        ore_v = ore_servizio[f] / n_f
+        d = {"nome": cfg_flotte.get(f, {}).get("nome", f), "veicoli": n_f,
+             "ore_servizio_per_veicolo": round(ore_v, 1),
+             "richieste_attese_per_veicolo": round(float(cf.sum()) / n_f, 1),
+             "richieste_per_veicolo": round(richieste_reali[f] / n_f, 1),
+             "assistenza_pct_tempo": round(100 * float(cf.sum()) * o["durata_media_intervento_s"] / (ore_servizio[f] * 3600), 1),
+             "ore_operatore": round(ore_op_f, 1),
+             "veicoli_per_operatore": round(ore_servizio[f] / ore_op_f, 1) if ore_op_f else None,
+             "orario": righe}
+        if euro_ora:
+            d["costo_veicolo_mese"] = round(ore_op_f * euro_ora * 365 / 12 / n_f)
+            d["costo_ora_servizio"] = round(ore_op_f * euro_ora / ore_servizio[f], 2)
+        per_flotta[f] = d
+
     # 5. Griglia dell'attenzione
     at = cfg["attenzione"]
     stati = attenzione.livelli(pas_con, rischio, fascia, nomi, inizio_s, fine_s, at["orizzonte_min"] * 60,
@@ -273,6 +313,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
                                    "operatori_in_turno": turno_con, "veicoli_attivi": attivi_con.astype(int).tolist()}})
     scrivi("rigioco.json", {"senza": ev_senza, "con": ev_con})
     scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "orario": orario,
+                        "per_flotta": per_flotta,
                         "economia": ({"paese": eco["paese"], "costo_ora_postazione": round(euro_ora, 2),
                                       "prezzo_servizio_mese": eco["prezzo_servizio_mese"]} if eco else None),
                         "spostamenti_min": sposta})
@@ -305,7 +346,14 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
         print(f"PARI {nome:12s} operatori medi={k['operatori_medi']:5}  ore operatore={k['ore_operatore']:6}  "
               f"veicoli/operatore={k['veicoli_per_operatore']:5}  entro {o['attesa_max_s']}s={k['entro_attesa_max_pct']}%"
               + (f"  costo €{k['costo_veicolo_mese']}/veicolo/mese  margine {k['margine_pct']}%" if euro_ora else ""))
-    return {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "attenzione": valid, "orario": orario}
+    print(f"{'FLOTTA':24s} {'veicoli':>7s} {'ore serv./veic.':>15s} {'richieste/veic.':>15s} {'% tempo assist.':>15s} "
+          f"{'ore operatore':>13s} {'veic./operatore':>15s}" + (f" {'€/veic./mese':>12s} {'€/ora serv.':>11s}" if euro_ora else ""))
+    for f, d in per_flotta.items():
+        print(f"{d['nome']:24s} {d['veicoli']:7d} {d['ore_servizio_per_veicolo']:15} {d['richieste_attese_per_veicolo']:15} "
+              f"{d['assistenza_pct_tempo']:15} {d['ore_operatore']:13} {d['veicoli_per_operatore']:15}"
+              + (f" {d['costo_veicolo_mese']:12} {d['costo_ora_servizio']:11}" if euro_ora else ""))
+    return {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "attenzione": valid, "orario": orario,
+            "per_flotta": per_flotta}
 
 
 if __name__ == "__main__":
