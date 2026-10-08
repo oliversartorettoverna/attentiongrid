@@ -33,7 +33,7 @@ GeoJSON `FeatureCollection` di `LineString`. Proprietà di ogni tratto:
 | `sottopasso` | booleano | Il tratto è un sottopasso (OSM `tunnel=yes`) o un punto basso che si allaga. Gli archi sotto i palazzi (`building_passage`) non contano |
 | `fonte_dati` | stringa | Da dove vengono i valori, es. `"osm+copernicus"` |
 
-## 2. `data/processed/rischio.csv`
+## 2. `data/processed/rischio.csv.gz`
 
 Rischio di intervento per ogni tratto e ogni fascia di 5 minuti del giorno dello scenario.
 

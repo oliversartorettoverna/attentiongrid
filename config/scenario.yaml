@@ -8,30 +8,68 @@ area:
 
 giorno:
   data: "2024-10-03"        # giovedì, giorno di scuola; pioggia >4 mm/h alle 16 e alle 17 (Open-Meteo)
-  inizio: "14:00"
-  fine: "19:00"
+  inizio: "06:00"           # la centrale segue i veicoli dall'inizio del servizio a mezzanotte
+  fine: "24:00"
   fascia_min: 5
 
-flotte:
+traffico:                   # velocità media del traffico a Roma (TomTom Traffic Index): i veicoli vanno a questa, fino al loro massimo
+  punta_kmh: 16.7           # media nelle ore di punta
+  punta_fasce: [["07:00", "10:00"], ["17:00", "20:00"]]
+  giorno_kmh: 19.5          # 10 km in 30 min 46 s, media dell'anno
+  sera_kmh: 30.0            # dalle 21: traffico libero, ogni veicolo va al suo massimo
+  sera_da: "21:00"
+
+flotte:                     # la centrale condivisa: 150 veicoli di 4 gestori diversi
   boxi:
-    veicoli: 12
-    velocita_max_kmh: 25
+    nome: "Poste · BOXi"
+    tipo: consegne
+    veicoli: 50
+    velocita_max_kmh: 25    # scheda BOXi
     fermate_per_giro: 8
     sosta_fermata_s: 90
-    deposito: "auto"         # auto = ufficio postale OSM più vicino al centro di Prati
-  navetta:
-    veicoli: 4
-    velocita_max_kmh: 20
-    percorso: "anello"       # solo nel finale multi-flotta
-  robot:
-    veicoli: 6
-    velocita_max_kmh: 6
-    percorso: "marciapiede"  # solo nel finale multi-flotta
+    ondate: ["08:30", "12:00", "16:00"]             # 3 giri: restano sotto i 60 km di autonomia (scheda BOXi)
+    deposito: [41.90719, 12.46561]                  # ufficio postale Roma 5, Prati
+    sfasabile: true
+  corriere_a:
+    nome: "Corriere A · furgoni"
+    tipo: consegne
+    veicoli: 40
+    velocita_max_kmh: 50    # limite urbano
+    fermate_per_giro: 12
+    sosta_fermata_s: 150
+    ondate: ["08:00", "12:30", "16:30"]
+    deposito: [41.88360, 12.47460]                  # Porta Portese
+    sfasabile: true
+  corriere_b:
+    nome: "Corriere B · furgoni"
+    tipo: consegne
+    veicoli: 30
+    velocita_max_kmh: 50
+    fermate_per_giro: 12
+    sosta_fermata_s: 150
+    ondate: ["09:00", "13:30", "17:00"]
+    deposito: [41.90600, 12.45750]                  # Borgo, verso Porta Cavalleggeri
+    sfasabile: true
+  navette:
+    nome: "Navette di linea"
+    tipo: linea
+    veicoli: 30
+    velocita_max_kmh: 25    # navette autonome di linea
+    sosta_fermata_s: 20
+    fermata_ogni_m: 400
+    servizio: ["06:30", "23:30"]
+    sfasabile: false        # orario di linea: non si sposta
+    linee:                  # capolinea e punti di passaggio (lat, lon); ogni linea fa avanti e indietro
+      - [[41.90670, 12.45930], [41.90660, 12.46430], [41.90460, 12.47050]]   # Risorgimento – Cola di Rienzo – Cavour
+      - [[41.90170, 12.46270], [41.89250, 12.47200], [41.88930, 12.47350]]   # Piazza Pia – Lungotevere – Sonnino
+      - [[41.89250, 12.46720], [41.88690, 12.46920], [41.88360, 12.47460]]   # Porta Settimiana – San Cosimato – Porta Portese
 
 operatori:
-  durata_media_intervento_s: 90
+  durata_media_intervento_s: 35   # ricavata da Cruise: una sessione ogni 4–5 miglia, 2–4% del tempo, 14 mph medie a San Francisco
   attesa_max_s: 20
   livello_servizio: 0.90
+  blocco_turno_min: 60      # con la previsione gli operatori in turno cambiano al massimo una volta l'ora
+  turni: [["06:00", "14:00"], ["14:00", "22:00"], ["22:00", "24:00"]]   # turni fissi di una centrale senza previsione
 
 attenzione:
   orizzonte_min: 3              # quanto avanti guarda il livello di ogni veicolo
@@ -45,4 +83,4 @@ ottimizzazione:
 
 rigioco:
   seme: 42                    # stesso seme per "senza" e "con"
-  operatori_senza_sistema: 3  # gli operatori fissi che avrebbe una flotta di 12 senza previsione
+  operatori_senza_sistema: 3  # pannello animato: operatori fissi senza previsione (il confronto del pitch è a parità di servizio)
