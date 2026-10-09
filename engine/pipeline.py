@@ -80,7 +80,11 @@ def rischio_pioggia_spostata(rischio_path, config_path, ore: int) -> dict | None
     meteo = pd.read_csv(cartella / "meteo.csv")
     meteo["pioggia_mm"] = meteo["pioggia_mm"].shift(ore).fillna(0.0)
     sc = yaml.safe_load(open(config_path, encoding="utf-8"))
-    pesi = yaml.safe_load(open(RADICE / "config/pesi_rischio.yaml", encoding="utf-8"))
+    # i pesi con cui è stato calcolato il rischio: quelli accanto al file (es. varianti della sensibilità) o config/
+    pesi_path = cartella / "pesi_rischio.yaml"
+    if not pesi_path.exists():
+        pesi_path = RADICE / "config/pesi_rischio.yaml"
+    pesi = yaml.safe_load(open(pesi_path, encoding="utf-8"))
     df = mr.calcola(mr.carica_tratti(), meteo, sc, pesi)
     return {(r.pop("seg_id"), r.pop("fascia")): r for r in df.to_dict("records")}
 

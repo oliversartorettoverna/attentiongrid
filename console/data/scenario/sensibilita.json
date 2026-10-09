@@ -5,9 +5,9 @@
    "gruppo": "",
    "fattore": 1.0,
    "richieste": 5287,
-   "risparmio_ore_pct": 49,
+   "risparmio_ore_pct": 59,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 7.0,
+   "veicoli_per_operatore_con": 8.9,
    "fermi_oltre_60s_senza": 798,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -17,11 +17,11 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 5104,
-   "risparmio_ore_pct": 49,
+   "risparmio_ore_pct": 60,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 7.1,
+   "veicoli_per_operatore_con": 9.1,
    "fermi_oltre_60s_senza": 738,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 5,
    "richieste_da_rosso_pct": 22
   },
   {
@@ -29,11 +29,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 5450,
-   "risparmio_ore_pct": 50,
+   "risparmio_ore_pct": 61,
    "veicoli_per_operatore_senza": 3.4,
-   "veicoli_per_operatore_con": 6.9,
+   "veicoli_per_operatore_con": 8.7,
    "fermi_oltre_60s_senza": 941,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 2,
    "richieste_da_rosso_pct": 23
   },
   {
@@ -41,9 +41,9 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 3871,
-   "risparmio_ore_pct": 51,
+   "risparmio_ore_pct": 61,
    "veicoli_per_operatore_senza": 4.1,
-   "veicoli_per_operatore_con": 8.4,
+   "veicoli_per_operatore_con": 10.6,
    "fermi_oltre_60s_senza": 624,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 13
@@ -53,9 +53,9 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 6644,
-   "risparmio_ore_pct": 47,
+   "risparmio_ore_pct": 57,
    "veicoli_per_operatore_senza": 3.2,
-   "veicoli_per_operatore_con": 6.0,
+   "veicoli_per_operatore_con": 7.5,
    "fermi_oltre_60s_senza": 1942,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 30
@@ -65,11 +65,11 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 4481,
-   "risparmio_ore_pct": 48,
+   "risparmio_ore_pct": 58,
    "veicoli_per_operatore_senza": 4.1,
-   "veicoli_per_operatore_con": 8.0,
+   "veicoli_per_operatore_con": 9.9,
    "fermi_oltre_60s_senza": 553,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 4,
    "richieste_da_rosso_pct": 13
   },
   {
@@ -77,11 +77,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 6030,
-   "risparmio_ore_pct": 54,
+   "risparmio_ore_pct": 64,
    "veicoli_per_operatore_senza": 2.9,
-   "veicoli_per_operatore_con": 6.2,
+   "veicoli_per_operatore_con": 8.0,
    "fermi_oltre_60s_senza": 1285,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 2,
    "richieste_da_rosso_pct": 32
   },
   {
@@ -89,9 +89,9 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 5107,
-   "risparmio_ore_pct": 48,
+   "risparmio_ore_pct": 58,
    "veicoli_per_operatore_senza": 3.9,
-   "veicoli_per_operatore_con": 7.4,
+   "veicoli_per_operatore_con": 9.2,
    "fermi_oltre_60s_senza": 1081,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 21
@@ -101,11 +101,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 5505,
-   "risparmio_ore_pct": 52,
+   "risparmio_ore_pct": 63,
    "veicoli_per_operatore_senza": 3.2,
-   "veicoli_per_operatore_con": 6.7,
+   "veicoli_per_operatore_con": 8.6,
    "fermi_oltre_60s_senza": 765,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 1,
    "richieste_da_rosso_pct": 24
   },
   {
@@ -113,11 +113,11 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 4921,
-   "risparmio_ore_pct": 44,
+   "risparmio_ore_pct": 56,
    "veicoli_per_operatore_senza": 4.1,
-   "veicoli_per_operatore_con": 7.4,
+   "veicoli_per_operatore_con": 9.5,
    "fermi_oltre_60s_senza": 51,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 2,
    "richieste_da_rosso_pct": 13
   },
   {
@@ -125,11 +125,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 5645,
-   "risparmio_ore_pct": 56,
+   "risparmio_ore_pct": 65,
    "veicoli_per_operatore_senza": 2.9,
-   "veicoli_per_operatore_con": 6.6,
+   "veicoli_per_operatore_con": 8.2,
    "fermi_oltre_60s_senza": 2320,
-   "fermi_oltre_60s_con": 3,
+   "fermi_oltre_60s_con": 6,
    "richieste_da_rosso_pct": 29
   },
   {
@@ -137,11 +137,11 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 5269,
-   "risparmio_ore_pct": 48,
+   "risparmio_ore_pct": 59,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 7.0,
+   "veicoli_per_operatore_con": 8.8,
    "fermi_oltre_60s_senza": 774,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 12,
    "richieste_da_rosso_pct": 22
   },
   {
@@ -149,11 +149,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 5288,
-   "risparmio_ore_pct": 51,
+   "risparmio_ore_pct": 62,
    "veicoli_per_operatore_senza": 3.4,
-   "veicoli_per_operatore_con": 6.9,
+   "veicoli_per_operatore_con": 8.9,
    "fermi_oltre_60s_senza": 847,
-   "fermi_oltre_60s_con": 48,
+   "fermi_oltre_60s_con": 53,
    "richieste_da_rosso_pct": 22
   },
   {
@@ -161,9 +161,9 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 5226,
-   "risparmio_ore_pct": 48,
+   "risparmio_ore_pct": 59,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 6.9,
+   "veicoli_per_operatore_con": 8.8,
    "fermi_oltre_60s_senza": 758,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -173,11 +173,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 5329,
-   "risparmio_ore_pct": 48,
+   "risparmio_ore_pct": 59,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 7.0,
+   "veicoli_per_operatore_con": 8.8,
    "fermi_oltre_60s_senza": 816,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 7,
    "richieste_da_rosso_pct": 22
   },
   {
@@ -185,11 +185,11 @@
    "gruppo": "pesi",
    "fattore": 0.5,
    "richieste": 2478,
-   "risparmio_ore_pct": 39,
+   "risparmio_ore_pct": 49,
    "veicoli_per_operatore_senza": 7.2,
-   "veicoli_per_operatore_con": 11.9,
+   "veicoli_per_operatore_con": 14.1,
    "fermi_oltre_60s_senza": 0,
-   "fermi_oltre_60s_con": 4,
+   "fermi_oltre_60s_con": 8,
    "richieste_da_rosso_pct": 0
   },
   {
@@ -197,11 +197,11 @@
    "gruppo": "pesi",
    "fattore": 1.5,
    "richieste": 8422,
-   "risparmio_ore_pct": 57,
+   "risparmio_ore_pct": 67,
    "veicoli_per_operatore_senza": 2.1,
-   "veicoli_per_operatore_con": 4.9,
+   "veicoli_per_operatore_con": 6.2,
    "fermi_oltre_60s_senza": 3658,
-   "fermi_oltre_60s_con": 0,
+   "fermi_oltre_60s_con": 2,
    "richieste_da_rosso_pct": 47
   },
   {
@@ -209,9 +209,9 @@
    "gruppo": "operativi",
    "fattore": 0.5,
    "richieste": 5287,
-   "risparmio_ore_pct": 52,
+   "risparmio_ore_pct": 59,
    "veicoli_per_operatore_senza": 5.8,
-   "veicoli_per_operatore_con": 12.0,
+   "veicoli_per_operatore_con": 14.3,
    "fermi_oltre_60s_senza": 1393,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -221,9 +221,9 @@
    "gruppo": "operativi",
    "fattore": 1.5,
    "richieste": 5287,
-   "risparmio_ore_pct": 51,
+   "risparmio_ore_pct": 62,
    "veicoli_per_operatore_senza": 2.4,
-   "veicoli_per_operatore_con": 5.0,
+   "veicoli_per_operatore_con": 6.4,
    "fermi_oltre_60s_senza": 756,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -233,9 +233,9 @@
    "gruppo": "operativi",
    "fattore": 0.5,
    "richieste": 5287,
-   "risparmio_ore_pct": 47,
+   "risparmio_ore_pct": 58,
    "veicoli_per_operatore_senza": 3.4,
-   "veicoli_per_operatore_con": 6.5,
+   "veicoli_per_operatore_con": 8.1,
    "fermi_oltre_60s_senza": 460,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -245,9 +245,9 @@
    "gruppo": "operativi",
    "fattore": 1.5,
    "richieste": 5287,
-   "risparmio_ore_pct": 50,
+   "risparmio_ore_pct": 61,
    "veicoli_per_operatore_senza": 3.6,
-   "veicoli_per_operatore_con": 7.3,
+   "veicoli_per_operatore_con": 9.2,
    "fermi_oltre_60s_senza": 1485,
    "fermi_oltre_60s_con": 0,
    "richieste_da_rosso_pct": 22
@@ -255,16 +255,16 @@
  ],
  "intervalli": {
   "risparmio_ore_pct": [
-   39,
-   57
+   49,
+   67
   ],
   "veicoli_per_operatore_con": [
-   4.9,
-   12.0
+   6.2,
+   14.3
   ],
   "fermi_oltre_60s_con": [
    0,
-   48
+   53
   ],
   "richieste_da_rosso_pct": [
    0,

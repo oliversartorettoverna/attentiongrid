@@ -111,6 +111,6 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 | Motore (`engine/`) | piano prudente: −59% ore operatore rispetto a tenere tutto il giorno il personale del picco (117 contro 288), da 3,6 a 8,9 veicoli per operatore, 98% delle richieste entro 20 s |
 | Robustezza del piano (`tools/prova_pianificazione.py`) | con il temporale un'ora prima o dopo il previsto il piano prudente tiene il 94% entro 20 s nell'ora peggiore; il piano normale scende al 34% e al 3% |
 | Griglia dell'attenzione (`engine/attenzione.py`) | il critico anticipa il 22% delle richieste e il giallo un altro 39%, due minuti prima; i veicoli sono in critico il 7% del tempo |
-| Sensibilità (`tools/sensibilita.py`) | con il piano prudente semplificato (picchi allargati, senza ricalcolo del temporale): risparmio di ore 49% nel caso di riferimento, tra 44% e 56% con un peso alla volta a ±50%, tra 39% e 57% con tutti i pesi insieme |
+| Sensibilità (`tools/sensibilita.py`) | con il piano prudente vero: risparmio di ore 59% nel caso di riferimento, tra 56% e 65% con un peso alla volta a ±50%, tra 49% e 67% con tutti i pesi insieme, tra 58% e 62% con durata degli interventi e attesa massima a ±50% |
 | Edifici 3D (`07`) | 5.598 edifici con altezza: 89% da satellite, 8% da OSM, 2% di riserva |
 | App (`web/`, `server/`) | cinque schermate sui dati del motore, mappa 3D che funziona senza internet |
