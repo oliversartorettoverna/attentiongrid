@@ -14,7 +14,6 @@ export function Flotta() {
   // Costo 1:1: un operatore dedicato per ogni ora di servizio del veicolo, allo stesso costo orario di postazione
   const costoUnoAUno = eco ? Math.round(f.ore_servizio_per_veicolo * eco.costo_ora_postazione * 365 / 12) : null
   const risparmio = costoUnoAUno ? Math.round(100 * (1 - f.costo_veicolo_mese / costoUnoAUno)) : null
-  const maxV = Math.max(...f.orario.map((o: any) => o.veicoli))
 
   return (
     <Pagina>
@@ -57,30 +56,41 @@ export function Flotta() {
         />
       </div>
 
-      <Riquadro titolo="Veicoli in strada e operatori dedicati, ora per ora">
-        <div className="mt-4 flex h-56 items-end gap-1.5">
-          {f.orario.map((o: any) => (
-            <div key={o.ora} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-              <div className="relative flex w-full flex-1 items-end">
-                <div className="w-full rounded-t-md bg-elevated" style={{ height: `${(o.veicoli / (maxV || 1)) * 100}%` }} />
-                <div
-                  className="absolute bottom-0 left-1/2 w-1.5 -translate-x-1/2 rounded-t-full bg-info"
-                  style={{ height: `${(o.operatori / (maxV || 1)) * 100 * 4}%` }}
-                />
-              </div>
-              <span className="num text-[10px] text-muted">{o.ora.slice(0, 2)}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-4 text-[11px] text-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-sm bg-elevated ring-1 ring-line-strong" /> veicoli in servizio
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-sm bg-info" /> operatori dedicati (×4 per leggibilità)
-          </span>
-        </div>
+      <Riquadro titolo="Ora per ora">
+        <Barre etichetta="Veicoli in servizio" valori={f.orario.map((o: any) => o.veicoli)} ore={f.orario.map((o: any) => o.ora)} colore="var(--color-secondary)" decimali={0} />
+        <Barre etichetta="Operatori dedicati alla flotta" valori={f.orario.map((o: any) => o.operatori)} ore={f.orario.map((o: any) => o.ora)} colore="var(--color-info)" decimali={1} conOre />
       </Riquadro>
     </Pagina>
+  )
+}
+
+/** Una riga di barre con la sua scala: veicoli e operatori hanno grandezze diverse, quindi non si sovrappongono. */
+function Barre({ etichetta, valori, ore, colore, decimali, conOre = false }: { etichetta: string; valori: number[]; ore: string[]; colore: string; decimali: number; conOre?: boolean }) {
+  const max = Math.max(...valori, 1e-9)
+  return (
+    <div className="mt-4">
+      <div className="mb-2 flex items-baseline justify-between text-xs">
+        <span className="text-secondary">{etichetta}</span>
+        <span className="num text-muted">massimo {max.toFixed(decimali).replace('.', ',')}</span>
+      </div>
+      <div className="flex h-24 items-end gap-1.5">
+        {valori.map((v, i) => (
+          <div key={ore[i]} className="group relative flex h-full flex-1 items-end">
+            <div className="w-full rounded-t-[4px] bg-elevated" style={{ height: '100%', position: 'absolute', opacity: 0.35 }} />
+            <div className="relative w-full rounded-t-[4px] transition-all duration-500" style={{ height: `${(v / max) * 100}%`, background: colore, minHeight: v > 0 ? 2 : 0 }} />
+            <span className="num pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-primary opacity-0 transition-opacity group-hover:opacity-100">
+              {v.toFixed(decimali).replace('.', ',')}
+            </span>
+          </div>
+        ))}
+      </div>
+      {conOre && (
+        <div className="mt-2 flex gap-1.5">
+          {ore.map((o) => (
+            <span key={o} className="num flex-1 text-center text-[10px] text-muted">{o.slice(0, 2)}</span>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

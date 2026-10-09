@@ -1,11 +1,12 @@
 // Mappa 3D di Prati e Trastevere disegnata solo con i nostri dati (strade OSM, edifici con altezza
 // da satellite): nessuna tile online, funziona anche senza rete.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap, MapLayerMouseEvent, MapMouseEvent } from 'maplibre-gl'
 import indirizzoWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { indiceFascia, livello, posizione, type Scenario } from '../lib/scenario'
 import { orologio } from '../lib/orologio'
+import { ComandiMappa } from './ComandiMappa'
 
 // Soglie grafiche della mappa (millesimi di probabilità per passaggio): sotto i 60 la strada resta neutra.
 // 60‰ ≈ 95° percentile della giornata, 100‰ ≈ 99°. Non toccano il modello, solo il disegno.
@@ -33,6 +34,7 @@ interface Props {
 export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   const div = useRef<HTMLDivElement>(null)
   const mappa = useRef<MLMap | null>(null)
+  const [pronta, setPronta] = useState<MLMap | null>(null)
   const sel = useRef(selezionato)
   sel.current = selezionato
 
@@ -48,7 +50,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       zoom: 14,
       pitch: 52,
       bearing: -17,
-      maxPitch: 70,
+      maxPitch: 70, // si inclina fino a 70°: mai sotto la città
       attributionControl: false,
       fadeDuration: 0,
     })
@@ -56,6 +58,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
     if (import.meta.env.DEV) (window as unknown as { mappa: MLMap }).mappa = m
 
     m.on('load', () => {
+      setPronta(m)
       const b = new maplibregl.LngLatBounds()
       for (const f of sc.tratti.features) for (const c of (f.geometry as GeoJSON.LineString).coordinates) b.extend(c as [number, number])
       const cam = m.cameraForBounds(b, { padding: { top: 40, bottom: 220, left: 380, right: 380 } })
@@ -222,7 +225,10 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       m.once('remove', () => cancelAnimationFrame(raf))
     })
 
-    return () => m.remove()
+    return () => {
+      setPronta(null)
+      m.remove()
+    }
   }, [sc]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al cambio di selezione la camera va sul veicolo
@@ -237,6 +243,11 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   return (
     <div className="absolute inset-0">
       <div ref={div} className="h-full w-full" />
+      {pronta && (
+        <div className="absolute right-[372px] bottom-[176px] z-10">
+          <ComandiMappa mappa={pronta} />
+        </div>
+      )}
     </div>
   )
 }

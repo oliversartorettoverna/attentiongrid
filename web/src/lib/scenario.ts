@@ -38,6 +38,22 @@ export interface OraKpi {
   veicoli_per_operatore_con: number
 }
 
+export interface PianoVerificato {
+  ore_pagate: number
+  costo_veicolo_mese: number
+  entro_pct: number
+  ora_peggiore_pct: number
+  operatori: number[]
+  entro_pct_ora: (number | null)[]
+}
+
+export interface Piani {
+  attesa_max_s: number
+  livello_servizio_pct: number
+  ore: string[]
+  casi: { chiave: 'previsto' | 'prima' | 'dopo'; nome: string; piani: Record<'fissi' | 'normale' | 'prudente', PianoVerificato> }[]
+}
+
 export interface Scenario {
   data: string
   flotte: Record<string, { nome: string; veicoli: number }>
@@ -65,6 +81,7 @@ export interface Scenario {
   }
   richieste: Richiesta[]
   kpi: any
+  piani: Piani | null // da tools/prova_pianificazione.py; può mancare
   tratti: GeoJSON.FeatureCollection
   edifici: GeoJSON.FeatureCollection
   nomiVie: Map<string, string>
@@ -98,6 +115,7 @@ export async function caricaScenario(): Promise<Scenario> {
     ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'rigioco.json', 'kpi.json',
       'tratti.geojson', 'edifici.geojson'].map(leggi),
   )
+  const piani = await leggi('piani.json').catch(() => null)
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
   return {
@@ -119,6 +137,7 @@ export async function caricaScenario(): Promise<Scenario> {
       .filter((e: any) => e.tipo === 'richiesta')
       .map((e: any) => ({ ...e, inizio: sec(e.ora) })),
     kpi,
+    piani,
     tratti,
     edifici,
     nomiVie,

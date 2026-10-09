@@ -8,12 +8,13 @@ Il contesto completo (idea, prove, business model, piano, ruoli) è nel [Drive d
 
 ## Cosa mostra la demo
 
-Roma, Prati e Trastevere, giovedì 3 ottobre 2024: un pomeriggio vero con temporale e uscita delle scuole. 12 BOXi (i veicoli autonomi di Poste) fanno consegne.
+Roma, Prati e Trastevere, giovedì 3 ottobre 2024: una giornata vera con temporale nel pomeriggio e uscita delle scuole. Una centrale condivisa segue 150 veicoli autonomi di 4 flotte: 50 BOXi di Poste, 70 furgoni di due corrieri e 30 navette di linea.
 
-- **Pannello sinistro, senza previsione:** 3 operatori fissi; le richieste di aiuto arrivano tutte insieme, si forma una coda, i veicoli restano fermi.
-- **Pannello destro, con AttentionGrid:** le strade si colorano con il rischio previsto, il picco è annunciato in anticipo, le partenze sono sfasate e gli operatori in turno seguono il piano.
-- **Griglia dell'attenzione:** ogni veicolo verde, giallo o rosso secondo il rischio dei prossimi minuti, con via e motivo.
-- **Risultato:** ore operatore e veicoli per operatore a parità di servizio, con l'intervallo di robustezza sui pesi.
+- **Console operatore:** mappa 3D con le strade colorate dal rischio, veicoli colorati dall'Autonomy Confidence Score, coda delle richieste con il timer dei 20 secondi, veicoli da tenere d'occhio con via e motivo.
+- **Planner turni:** turni fissi, piano normale e piano prudente a confronto, anche con il temporale che arriva un'ora prima o dopo il previsto.
+- **Registro e report:** ogni intervento tracciato ed esportabile.
+- **Dashboard flotta:** la vista del cliente (Poste vede solo i BOXi), con il costo contro l'1:1.
+- **Configurazione:** flotte, soglie dello score, livello di servizio.
 
 ## Come funziona (pipeline)
 
@@ -106,8 +107,10 @@ Per lavorare sulla console senza aspettare dati e simulazione: `python tools/gen
 | Tratti (`02`) | 1.769 tratti, canyon misurato tra le facciate, altezze da satellite (Copernicus), scuole dal Ministero, 9 sottovia |
 | Mappa del rischio (`04`) | pesi tarati su Cruise, sul rilievo in strada e sulla letteratura; picco 16:00–17:30 |
 | Rilievo in strada (`data/rilievo/`) | 8 vie di Prati e Trastevere: doppia fila, pedoni, scuole |
-| Simulatore BOXi (`sim/`) | 12 BOXi, 4 giri da 8 fermate, deposito Roma 5 |
-| Motore (`engine/`) | −51% ore operatore a parità di servizio, da 1,5 a 3,1 veicoli per operatore |
-| Griglia dell'attenzione (`engine/attenzione.py`) | il rosso anticipa il 54% delle richieste |
-| Sensibilità (`tools/sensibilita.py`) | risparmio tra 49% e 59% con pesi a ±50% |
-| Console (`console/`) | strade colorate dal rischio, previsione del picco, griglia, risultato, tasti per il palco |
+| Simulatore (`sim/`) | 150 veicoli di 4 flotte su una giornata intera (06–24): 50 BOXi, 40 + 30 furgoni, 30 navette |
+| Motore (`engine/`) | piano prudente: −59% ore operatore rispetto a tenere tutto il giorno il personale del picco (117 contro 288), da 3,6 a 8,9 veicoli per operatore, 98% delle richieste entro 20 s |
+| Robustezza del piano (`tools/prova_pianificazione.py`) | con il temporale un'ora prima o dopo il previsto il piano prudente tiene il 94% entro 20 s nell'ora peggiore; il piano normale scende al 34% e al 3% |
+| Griglia dell'attenzione (`engine/attenzione.py`) | il critico anticipa il 22% delle richieste e il giallo un altro 39%, due minuti prima; i veicoli sono in critico il 7% del tempo |
+| Sensibilità (`tools/sensibilita.py`) | sullo scenario a 12 BOXi: risparmio tra 49% e 59% con pesi a ±50% |
+| Edifici 3D (`07`) | 5.598 edifici con altezza: 89% da satellite, 8% da OSM, 2% di riserva |
+| App (`web/`, `server/`) | cinque schermate sui dati del motore, mappa 3D che funziona senza internet |

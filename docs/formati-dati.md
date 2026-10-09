@@ -156,4 +156,13 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"h": 18.5}, "geometry": {"type": "Polygon", "coordinates": [[[12.4612, 41.9071]]]}}]}
 ```
 
+`piani.json` (da `tools/prova_pianificazione.py`, qualche minuto): i tre piani dei turni (turni fissi, piano normale, piano prudente) fatti sulla previsione e verificati sulla giornata vera, in tre casi: temporale come previsto, un'ora prima del previsto, un'ora dopo. Per ogni piano: ore pagate, costo per veicolo al mese, quota di richieste entro 20 s sulla giornata e nell'ora peggiore, e ora per ora gli operatori in turno (`operatori`, massimo dell'ora) e la quota entro 20 s (`entro_pct`, `null` se nell'ora ci sono meno di 20 richieste).
+```json
+{"attesa_max_s": 20, "livello_servizio_pct": 90, "ore": ["06:00", "07:00"],
+ "casi": [{"chiave": "prima", "nome": "Il temporale arriva un'ora prima del previsto",
+           "piani": {"normale": {"ore_pagate": 110.0, "costo_veicolo_mese": 797, "entro_pct": 82, "ora_peggiore_pct": 34,
+                                 "operatori": [3, 4], "entro_pct_ora": [100, null]}}}]}
+```
+Le chiavi dei casi sono `previsto`, `prima` e `dopo`; quelle dei piani `fissi`, `normale` e `prudente`.
+
 `tratti.geojson`: copia di `data/processed/tratti.geojson` ridotta ai campi `seg_id` e `nome` (serve per disegnare le strade senza bisogno di internet).
