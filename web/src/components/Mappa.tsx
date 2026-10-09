@@ -1,12 +1,11 @@
 // Mappa 3D di Prati e Trastevere disegnata solo con i nostri dati (strade OSM, edifici con altezza
 // da satellite): nessuna tile online, funziona anche senza rete.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap, MapLayerMouseEvent, MapMouseEvent } from 'maplibre-gl'
 import indirizzoWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { indiceFascia, livello, posizione, type Scenario } from '../lib/scenario'
 import { orologio } from '../lib/orologio'
-import { ComandiMappa } from './ComandiMappa'
 
 // Soglie grafiche della mappa (millesimi di probabilità per passaggio): sotto i 60 la strada resta neutra.
 // 60‰ ≈ 95° percentile della giornata, 100‰ ≈ 99°. Non toccano il modello, solo il disegno.
@@ -15,6 +14,42 @@ const STRADA_CRITICA = 100
 
 // Il worker di MapLibre (calcoli della mappa in un thread separato) impacchettato da Vite insieme all'app
 maplibregl.setWorkerUrl(indirizzoWorker)
+
+// Rotazione come su Google Maps: click a due dita sul touchpad (tasto destro) o Ctrl + clic, poi trascina.
+// In orizzontale ruota in modo lineare ovunque sia il puntatore, in verticale inclina.
+const GRADI_ROTAZIONE_PER_PIXEL = 0.4
+const GRADI_INCLINAZIONE_PER_PIXEL = 0.3
+
+function rotazioneTouchpad(m: MLMap) {
+  m.dragRotate.disable() // la rotazione di MapLibre gira attorno al centro: lontano dal centro è lentissima
+  const area = m.getCanvasContainer()
+  let ultimo: { x: number; y: number } | null = null
+  const giu = (e: MouseEvent) => {
+    if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
+      ultimo = { x: e.clientX, y: e.clientY }
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+  const muovi = (e: MouseEvent) => {
+    if (!ultimo) return
+    m.jumpTo({
+      bearing: m.getBearing() + (e.clientX - ultimo.x) * GRADI_ROTAZIONE_PER_PIXEL,
+      pitch: m.getPitch() - (e.clientY - ultimo.y) * GRADI_INCLINAZIONE_PER_PIXEL,
+    })
+    ultimo = { x: e.clientX, y: e.clientY }
+  }
+  const su = () => (ultimo = null)
+  const menu = (e: Event) => e.preventDefault()
+  area.addEventListener('mousedown', giu, true)
+  area.addEventListener('contextmenu', menu)
+  window.addEventListener('mousemove', muovi)
+  window.addEventListener('mouseup', su)
+  m.once('remove', () => {
+    window.removeEventListener('mousemove', muovi)
+    window.removeEventListener('mouseup', su)
+  })
+}
 
 const C = {
   base: '#09090B',
@@ -34,7 +69,6 @@ interface Props {
 export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   const div = useRef<HTMLDivElement>(null)
   const mappa = useRef<MLMap | null>(null)
-  const [pronta, setPronta] = useState<MLMap | null>(null)
   const sel = useRef(selezionato)
   sel.current = selezionato
 
@@ -55,10 +89,10 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       fadeDuration: 0,
     })
     mappa.current = m
+    rotazioneTouchpad(m)
     if (import.meta.env.DEV) (window as unknown as { mappa: MLMap }).mappa = m
 
     m.on('load', () => {
-      setPronta(m)
       const b = new maplibregl.LngLatBounds()
       for (const f of sc.tratti.features) for (const c of (f.geometry as GeoJSON.LineString).coordinates) b.extend(c as [number, number])
       const cam = m.cameraForBounds(b, { padding: { top: 40, bottom: 220, left: 380, right: 380 } })
@@ -225,10 +259,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       m.once('remove', () => cancelAnimationFrame(raf))
     })
 
-    return () => {
-      setPronta(null)
-      m.remove()
-    }
+    return () => m.remove()
   }, [sc]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al cambio di selezione la camera va sul veicolo
@@ -243,11 +274,6 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   return (
     <div className="absolute inset-0">
       <div ref={div} className="h-full w-full" />
-      {pronta && (
-        <div className="absolute right-[372px] bottom-[176px] z-10">
-          <ComandiMappa mappa={pronta} />
-        </div>
-      )}
     </div>
   )
 }

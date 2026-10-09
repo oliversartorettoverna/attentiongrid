@@ -85,7 +85,7 @@ def main():
             yaml.safe_dump(s, open(tmp / "scenario.yaml", "w", encoding="utf-8"), allow_unicode=True)
             with contextlib.redirect_stdout(io.StringIO()):
                 r = esegui(RADICE / "sim/out/giri.json", tmp / "rischio.csv", PROCESSED / "tratti.geojson",
-                           tmp / "out", tmp / "scenario.yaml", {"boxi"})
+                           tmp / "out", tmp / "scenario.yaml")
             ps, pc = r["parita_servizio"]["senza"], r["parita_servizio"]["con"]
             riga = {
                 "parametro": nome, "gruppo": gruppo, "fattore": k,
