@@ -4,8 +4,34 @@
     {
       "name": "console",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "http.server", "8000", "--directory", "console"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8000",
+        "--directory",
+        "console"
+      ],
       "port": 8000
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "PYTHONPATH=.venv/lib/python3.11/site-packages exec /opt/homebrew/opt/python@3.11/bin/python3.11 -m uvicorn server.main:app --port 8001"
+      ],
+      "port": 8001
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "web",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

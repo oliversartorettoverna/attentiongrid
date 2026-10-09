@@ -135,17 +135,25 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 
 `sensibilita.json` (facoltativo, da `tools/sensibilita.py`): una riga per variante (`parametro`, `gruppo`, `fattore`, `richieste`, `risparmio_ore_pct`, `veicoli_per_operatore_senza`/`_con`, `fermi_oltre_60s_senza`/`_con`, `richieste_da_rosso_pct`) e `intervalli` con minimo e massimo di ogni numero su tutte le varianti.
 
-`attenzione.json`: la griglia dell'attenzione (scenario con sistema). Per ogni veicolo un elenco con uno stato per minuto a partire da `inizio`: `[livello, P, via, motivo, tra_s]`, oppure `[-1]` se il veicolo è fermo al deposito. `livello` 0 verde (autonomo), 1 giallo (in osservazione), 2 rosso (intervento probabile); `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti; `via` e `motivo` sono il tratto più rischioso davanti e il suo fattore principale; `tra_s` quanti secondi mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
+`attenzione.json`: la griglia dell'attenzione (scenario con sistema). `livelli` dà per ogni veicolo una stringa con un carattere per minuto a partire da `inizio`: `-` fermo al deposito, `0` verde (autonomo), `1` giallo (in osservazione), `2` rosso (intervento probabile). `dettagli` ha una voce per minuto con i 12 veicoli più a rischio, ognuno `[veicolo_id, livello, P, via, motivo, tra_s]`: `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti, `via` e `motivo` il tratto più rischioso davanti e il suo fattore principale, `tra_s` i secondi che mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
 ```json
-{"passo_s": 60, "inizio": "14:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},
- "validazione": {"tempo_pct": {"verde": 45, "giallo": 34, "rosso": 21}, "richieste_da_pct": {"verde": 19, "giallo": 28, "rosso": 52}, "rosso_su_verde": 5.9, "anticipo_s": 120},
- "veicoli": {"boxi_01": [[-1], [0, 0.12, "Via Crescenzio", "attraversamenti pedonali", 95], [2, 0.51, "Via Cola di Rienzo", "uscita scuola", 40]]}}
+{"passo_s": 60, "inizio": "06:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},
+ "validazione": {"tempo_pct": {"verde": 66, "giallo": 27, "rosso": 7}, "richieste_da_pct": {"verde": 39, "giallo": 39, "rosso": 22}, "rosso_su_verde": 5.2, "anticipo_s": 120},
+ "livelli": {"boxi_01": "---0001121"},
+ "dettagli": [[["boxi_33", 2, 0.742, "Corso Vittorio Emanuele Secondo", "attraversamenti pedonali + pioggia", 58]]]}
 ```
 
-`veicoli.json`: i percorsi per animare i veicoli, senza e con lo sfasamento delle partenze. Ogni punto è `[ora, lat, lon]`.
+`veicoli.json`: i percorsi per animare i veicoli (scenario con sistema, partenze già sfasate). `t0` è il secondo della giornata del primo punto; i punti `[lat, lon]` sono uno ogni `passo_s` secondi. `spostamenti_s` dice di quanto è stata spostata la partenza di ogni veicolo.
 ```json
-{"senza": [{"veicolo_id": "boxi_01", "flotta": "boxi", "percorso": [["14:00:30", 41.9062, 12.4640]]}],
- "con":   [{"veicolo_id": "boxi_01", "flotta": "boxi", "percorso": [["14:08:30", 41.9062, 12.4640]]}]}
+{"passo_s": 30,
+ "flotte": {"boxi": {"nome": "Poste · BOXi", "veicoli": 50}},
+ "spostamenti_s": {"boxi_01": 540},
+ "veicoli": [{"veicolo_id": "boxi_01", "flotta": "boxi", "t0": 30660, "punti": [[41.90731, 12.46538]]}]}
+```
+
+`edifici.geojson` (da `data/scripts/07_edifici_console.py`): pianta semplificata degli edifici con l'altezza `h` in metri, per la mappa 3D. Altezza da OSM, poi da Copernicus, poi 15 m di riserva.
+```json
+{"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"h": 18.5}, "geometry": {"type": "Polygon", "coordinates": [[[12.4612, 41.9071]]]}}]}
 ```
 
 `tratti.geojson`: copia di `data/processed/tratti.geojson` ridotta ai campi `seg_id` e `nome` (serve per disegnare le strade senza bisogno di internet).

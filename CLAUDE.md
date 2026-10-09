@@ -36,6 +36,9 @@ Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`si
 
 - Python 3.11, ambiente in `.venv`, dipendenze in `requirements.txt`.
 - osmnx 2.x: `bbox = (left, bottom, right, top)`. L'area è in `config/scenario.yaml` (`riquadro`).
-- La console è statica: si apre con `python -m http.server 8000 --directory console` e `http://localhost:8000` (dati veri) o `http://localhost:8000/?dati=esempio` (dati finti). Aprire `index.html` con doppio clic non funziona. Deve funzionare anche senza internet: niente librerie, font o mappe da CDN.
+- L'app è in `web/` (Vite + React + TypeScript, Tailwind, MapLibre) e legge i dati dal server locale FastAPI in `server/`. Sviluppo: `.venv/bin/uvicorn server.main:app --port 8001` e, in un altro terminale, `npm --prefix web run dev` → `http://localhost:5173`. Per il palco: `npm --prefix web run build`, poi solo il server → `http://localhost:8001`.
+- Mappa, simulatore e motore girano sul laptop e devono funzionare senza internet: niente librerie, font o mappe da CDN (tutto installato con npm). Supabase, copilota AI e telefono-BOXi passano dalla rete e hanno sempre un ripiego se la rete cade.
+- Grafica: palette e regole in `web/src/index.css` (AG Brand v1 nel Drive, 06 Loghi e palette). Il colore si usa solo per gli stati, ogni stato ha anche l'etichetta scritta, il rosso è riservato a critico e arresto.
+- La vecchia console statica in `console/` resta come riserva: `python -m http.server 8000 --directory console`.
 - Prova rapida del motore: `python engine/erlang.py` deve stampare `OK`.
 - Finale multi-flotta: `python engine/pipeline.py --flotte boxi,navetta,robot --out console/data/scenario_multiflotta`.

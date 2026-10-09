@@ -31,7 +31,9 @@ data/scripts  →  data/processed  →  sim  →  engine  →  console
 | `data/processed/` | Output piccoli della pipeline dati (versionati) |
 | `sim/` | Simula i giri di consegna dei veicoli sulle strade vere |
 | `engine/` | Previsione degli interventi, calcolo turni (Erlang C), sfasamento partenze, griglia dell'attenzione, rigioco dello scenario con e senza sistema |
-| `console/` | Pagina web della demo: due mappe, griglia dell'attenzione, curva delle richieste, risultato |
+| `web/` | L'app: console operatore, planner turni, registro, dashboard flotta, configurazione |
+| `server/` | Server locale (FastAPI): dà all'app i dati dello scenario e, compilata, l'app stessa |
+| `console/` | Dati dello scenario per l'app (`console/data/`) e la vecchia console statica |
 | `tools/` | Dati di esempio e analisi di sensibilità |
 | `docs/` | Architettura, formati dei file, ipotesi e parametri |
 
@@ -72,10 +74,17 @@ python engine/pipeline.py                     # previsione, turni, ottimizzazion
 # Facoltativo: sensibilità dei risultati ai pesi (qualche minuto) → console/data/scenario/sensibilita.json
 python tools/sensibilita.py
 
-# 4. Demo
+python data/scripts/07_edifici_console.py     # edifici con altezza per la mappa 3D → console/data/scenario/edifici.geojson
+
+# 4. App (serve anche Node.js 20 o più recente)
+npm --prefix web install
+npm --prefix web run build
+.venv/bin/uvicorn server.main:app --port 8001
+# poi apri http://localhost:8001 · tasti: spazio avvia/ferma · ← → ±10 min
+# in sviluppo: server come sopra e, in un altro terminale, npm --prefix web run dev → http://localhost:5173
+
+# Riserva: la vecchia console statica
 python -m http.server 8000 --directory console
-# poi apri http://localhost:8000
-# tasti: spazio avvia/ferma · 1 poco prima del picco · ← → ±10 min · R risultato · F schermo intero
 ```
 
 Per lavorare sulla console senza aspettare dati e simulazione: `python tools/genera_esempio.py` rigenera i file finti in `console/data/esempio/`.
