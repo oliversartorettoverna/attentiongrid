@@ -169,16 +169,22 @@ Dal server all'app:
 ```json
 {"t": 58232.5, "velocita": 30, "in_corsa": true,
  "temporale": "previsto", "scenario": "scenario", "temporali": ["previsto", "prima"],
+ "cause": ["Pedoni in attraversamento", "Doppia fila o ostacolo", "Altro"],
+ "chiusi": [{"id": 2507, "veicolo_id": "navette_110", "seg_id": "seg_000513", "via": "Via Cola di Rienzo", "chiamata": 58977.0,
+             "attesa_s": 4, "durata_s": 120, "azione": "assistenza", "causa": "Doppia fila o ostacolo",
+             "motivo_previsto": "attraversamenti pedonali", "operatore": "tu"}],
  "ritardi": {"boxi_07": 412.0},
  "richieste": [{"id": 1834, "veicolo_id": "boxi_07", "seg_id": "seg_000456", "inizio": 58210.0,
-                "inizio_piano": 57798, "attesa_s": 12, "durata_s": 33, "operatore": 1, "stato": "in_attesa"}]}
+                "inizio_piano": 57798, "attesa_s": 60, "durata_s": 33, "operatore": 2, "assegnata": true,
+                "via": "Via della Scala", "motivo_previsto": "uscita scuola + pioggia", "stato": "in_attesa"}]}
 ```
 - `t`: secondo della giornata; l'app lo fa avanzare da sola tra un messaggio e l'altro con `velocita` se `in_corsa`.
 - `temporale`: quale giornata vera si sta giocando, `previsto` o `prima` (il temporale arriva un'ora prima di quanto previsto la sera prima); `scenario` è la cartella dei suoi dati in `console/data/`, che l'app ricarica quando cambia; `temporali` le giornate disponibili.
 - `ritardi`: secondi persi da ogni veicolo, fermo ad aspettare o durante gli interventi. L'app legge posizione, livello e probabilità del veicolo all'ora `t − ritardo`.
-- `richieste`: quelle aperte. `inizio` è quando il veicolo ha chiamato (l'ora del piano `inizio_piano` più il ritardo accumulato fino a lì); `stato` è `in_attesa` finché un operatore non la prende, poi `in_gestione`. Il veicolo resta fermo per `attesa_s + durata_s`.
+- `richieste`: quelle aperte. `inizio` è quando il veicolo ha chiamato (l'ora del piano `inizio_piano` più il ritardo accumulato fino a lì); `stato` è `in_attesa` finché un operatore non la prende, poi `in_gestione`; `assistenza` e `arresto` sono richieste chiuse dall'operatore in console con quell'azione, con il veicolo ancora fermo fino a `riparte` (secondo della giornata). Una richiesta passata a un collega la prende un operatore simulato da quel momento, con la durata del rigioco. `operatore` è il numero dell'operatore simulato (da 0) oppure `"tu"`; `assegnata` dice se il motore l'ha assegnata alla postazione della console: allora aspetta l'operatore fino a `passa_a_collega_dopo_s` (è il valore di `attesa_s`). `via` e `motivo_previsto` vengono dal registro del motore. Il veicolo resta fermo per `attesa_s + durata_s`, o finché l'operatore in console non chiude.
+- `cause`: le cause tra cui scegliere alla chiusura (`config/scenario.yaml`, `console.cause`). `chiusi`: gli ultimi 50 interventi chiusi dall'operatore in console nella giornata in corso, con azione e causa confermata.
 
-Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio).
+Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento"}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega).
 
 La cartella `console/data/scenario_temporale_prima/` ha gli stessi file di `scenario/` (tranne `edifici.geojson`, `piani.json`, `sensibilita.json`) e si fa con `python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_temporale_prima`: il piano dei turni e lo sfasamento delle partenze sono fatti su una previsione con il temporale un'ora più tardi, la giornata vera è quella del 3 ottobre 2024.
 

@@ -152,6 +152,18 @@ Il piano prudente rifà il piano con il temporale anticipato e ritardato di un'o
 | Flotte | 150 veicoli di 4 gestori: 50 BOXi, 40 + 30 furgoni di due corrieri, 30 navette di linea (vedi "Flotte della centrale condivisa") | scelta |
 | Deposito BOXi | ufficio postale Roma 5, Prati | scelta |
 
+## Console dell'operatore
+
+| Parametro | Valore | Stato | Dove |
+|---|---|---|---|
+| Postazione di chi usa la console | 3 (le richieste che il motore le assegna aspettano l'operatore) | scelta | `config/scenario.yaml`, `console` |
+| Passa a un collega se non la prendi | dopo 60 s | scelta | `config/scenario.yaml`, `console` |
+| Fermo dopo "assistenza in strada" | 10 minuti | stima | `config/scenario.yaml`, `console` |
+| Fermo dopo "arresto" | 15 minuti | stima | `config/scenario.yaml`, `console` |
+| Cause alla chiusura | pedoni, doppia fila o ostacolo, uscita scuola o folla, pioggia o visibilità, GPS o sensori, altro | scelta | `config/scenario.yaml`, `console` |
+
+Alla postazione 3 il motore assegna circa una richiesta al minuto nell'ora del temporale: un ritmo da seguire a velocità 1×.
+
 ## Scelte grafiche dell'app
 
 Non toccano il modello: decidono solo cosa si vede.

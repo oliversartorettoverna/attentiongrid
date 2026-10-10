@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUpRight, Hand, Navigation, OctagonX, Siren, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Siren, X } from 'lucide-react'
 import { Mappa } from '../components/Mappa'
 import { LineaGiornata } from '../components/LineaGiornata'
 import { Stato, coloreLivello } from '../components/Stato'
 import { useScenario } from '../lib/ScenarioContext'
-import { useOra } from '../lib/orologio'
+import { interventi, useOra, type Azione, type RichiestaDiretta } from '../lib/orologio'
 import {
   livello,
   piuARischio,
@@ -22,12 +22,26 @@ const ATTESA_MAX_S = 20 // livello di servizio: 90% delle richieste prese entro 
 export function Console() {
   const sc = useScenario()
   const [sel, setSel] = useState<string | null>(null)
+  const { richieste } = useOra()
+  // Invio prende la prima richiesta che aspetta te e apre la sua scheda
+  useEffect(() => {
+    const tasto = (e: KeyboardEvent) => {
+      if (e.code !== 'Enter' || (e.target as HTMLElement).tagName === 'INPUT') return
+      const prima = richieste.filter((r) => r.assegnata && r.stato === 'in_attesa').sort((a, b) => a.inizio - b.inizio)[0]
+      if (prima) {
+        interventi.prendi(prima.id)
+        setSel(prima.veicolo_id)
+      }
+    }
+    window.addEventListener('keydown', tasto)
+    return () => window.removeEventListener('keydown', tasto)
+  }, [richieste])
   if (!sc) return <Caricamento />
   return (
     <div className="absolute inset-0 overflow-hidden">
       <Mappa sc={sc} selezionato={sel} onSeleziona={setSel} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(9,9,11,0.85))]" />
-      <Coda sc={sc} onSeleziona={setSel} />
+      <Coda sc={sc} sel={sel} onSeleziona={setSel} />
       <ColonnaDestra sc={sc} sel={sel} onSeleziona={setSel} />
       <Fondo sc={sc} />
     </div>
@@ -51,13 +65,24 @@ const entrata = (i: number) => ({
   transition: { delay: 0.15 + i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
 })
 
-function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => void }) {
+type Aperta = RichiestaDiretta & { trascorsi: number; presa: number }
+
+/** Ordine della coda: prima quelle che aspettano te, poi le tue, poi le altre in attesa, poi quelle dei colleghi. */
+function priorita(r: RichiestaDiretta) {
+  if (r.stato === 'in_attesa') return r.assegnata ? 0 : 2
+  if (r.operatore === 'tu') return r.stato === 'in_gestione' ? 1 : 3
+  return 4
+}
+
+function apri(r: RichiestaDiretta, t: number): Aperta {
+  // presa: quando un operatore l'ha presa (per le richieste ancora in attesa è nel futuro)
+  return { ...r, trascorsi: Math.max(0, t - r.inizio), presa: r.inizio + r.attesa_s }
+}
+
+function Coda({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSeleziona: (id: string) => void }) {
   const { t, richieste } = useOra()
-  // le richieste aperte le manda il server; attesa e stato si aggiornano qui tra un messaggio e l'altro
-  const aperte = richieste
-    .map((r) => ({ ...r, attesa: Math.max(0, Math.min(t - r.inizio, r.attesa_s)), inGestione: t >= r.inizio + r.attesa_s }))
-    .sort((a, b) => Number(a.inGestione) - Number(b.inGestione) || a.inizio - b.inizio)
-  const inAttesa = aperte.filter((r) => !r.inGestione).length
+  const aperte = richieste.map((r) => apri(r, t)).sort((a, b) => priorita(a) - priorita(b) || a.inizio - b.inizio)
+  const perTe = aperte.filter((r) => r.assegnata && r.stato === 'in_attesa').length
   return (
     <motion.section {...entrata(0)} className="glass absolute top-4 left-4 flex max-h-[calc(100%-200px)] w-[340px] flex-col rounded-2xl">
       <header className="flex items-center justify-between px-4 pt-4 pb-3">
@@ -65,19 +90,37 @@ function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => 
           <div className="eyebrow">Coda richieste</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="num text-2xl font-medium">{aperte.length}</span>
-            <span className="text-xs text-muted">aperte · {inAttesa} in attesa</span>
+            <span className="text-xs text-muted">
+              aperte · <span className={perTe ? 'text-critical' : ''}>{perTe} per te</span>
+            </span>
           </div>
         </div>
-        <span className="num text-xs text-muted">obiettivo ≤ {ATTESA_MAX_S} s</span>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {aperte.length === 0 && (
-          <div className="px-2 py-6 text-center text-sm text-muted">Nessun veicolo sta chiedendo aiuto.</div>
+        {perTe > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+            <kbd className="num rounded border border-line-strong px-1.5 py-0.5 text-[10px] text-secondary">
+              <CornerDownLeft className="inline size-3" />
+            </kbd>
+            prendi
+          </span>
         )}
+      </header>
+      <div className="flex gap-3 px-4 pb-2.5 text-[10.5px] text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-warn" /> aspetta
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-info" /> in gestione
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-offline" /> chiusa, ancora fermo
+        </span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+        {aperte.length === 0 && <div className="px-2 py-6 text-center text-sm text-muted">Nessun veicolo sta chiedendo aiuto.</div>}
         <AnimatePresence initial={false}>
           {aperte.map((r) => {
-            const via = sc.nomiVie.get(r.seg_id) || 'Via senza nome'
-            const scaduta = !r.inGestione && r.attesa > ATTESA_MAX_S
+            const attende = r.stato === 'in_attesa'
+            const urgente = attende && r.assegnata
             return (
               <motion.button
                 layout
@@ -87,22 +130,26 @@ function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => 
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => onSeleziona(r.veicolo_id)}
-                className="mb-1.5 flex w-full items-center gap-3 rounded-xl bg-elevated px-3 py-2.5 text-left ring-1 transition-colors hover:ring-line-strong"
-                style={{ ['--tw-ring-color' as string]: r.inGestione ? 'var(--color-line)' : 'color-mix(in srgb, var(--color-critical) 45%, transparent)' }}
+                className={`mb-1.5 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-1 transition-colors hover:ring-line-strong ${sel === r.veicolo_id ? 'bg-elevated' : 'bg-elevated/70'}`}
+                style={{
+                  ['--tw-ring-color' as string]:
+                    sel === r.veicolo_id
+                      ? 'color-mix(in srgb, var(--color-info) 70%, transparent)'
+                      : urgente
+                        ? 'color-mix(in srgb, var(--color-critical) 55%, transparent)'
+                        : 'var(--color-line)',
+                }}
               >
-                <Timer secondi={r.inGestione ? r.durata_s : r.attesa} inGestione={r.inGestione} scaduta={scaduta} t={t} inizio={r.inizio + r.attesa_s} />
+                <Timer r={r} t={t} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="num text-[13px] font-medium">{sigla(r.veicolo_id)}</span>
                     <span className="truncate text-xs text-muted">{sc.flotte[sc.perId.get(r.veicolo_id)?.flotta ?? '']?.nome}</span>
                   </div>
-                  <div className="truncate text-xs text-secondary">{via}</div>
+                  <div className="truncate text-xs text-secondary">{r.via || sc.nomiVie.get(r.seg_id) || 'Via senza nome'}</div>
+                  <div className="num truncate text-[11px] text-muted">{didascalia(r, t)}</div>
                 </div>
-                {r.inGestione ? (
-                  <span className="num shrink-0 text-[11px] text-muted">Op. {r.operatore + 1}</span>
-                ) : (
-                  <Stato livello={2} etichetta="Richiesta" pulsa />
-                )}
+                <Etichetta r={r} />
               </motion.button>
             )
           })}
@@ -112,31 +159,72 @@ function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => 
   )
 }
 
-/** Anello del timer: in attesa conta verso i 20 secondi, in gestione mostra da quanto l'operatore è sul veicolo. */
-function Timer({ secondi, inGestione, scaduta, t, inizio }: { secondi: number; inGestione: boolean; scaduta: boolean; t: number; inizio: number }) {
-  const r = 15
-  const giro = 2 * Math.PI * r
-  const trascorsi = inGestione ? Math.max(0, t - inizio) : secondi
-  const quota = inGestione ? Math.min(1, trascorsi / Math.max(1, secondi)) : Math.min(1, secondi / ATTESA_MAX_S)
-  const colore = inGestione ? 'var(--color-info)' : scaduta ? 'var(--color-critical)' : 'var(--color-warn)'
+const mmss = (s: number) => (s < 60 ? `${Math.floor(s)} s` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`)
+
+/** Cosa sta succedendo, in parole: aspetta, in gestione, riparte tra. */
+function didascalia(r: Aperta, t: number) {
+  if (r.stato === 'in_attesa') return `aspetta da ${mmss(r.trascorsi)}`
+  if (r.stato === 'in_gestione') return `in gestione da ${mmss(Math.max(0, t - r.presa))}`
+  return `riparte tra ${mmss(Math.max(0, (r.riparte ?? t) - t))}`
+}
+
+function Etichetta({ r }: { r: Aperta }) {
+  if (r.stato === 'in_attesa') return <Stato livello={2} etichetta={r.assegnata ? 'Per te' : 'Richiesta'} pulsa />
+  if (r.stato === 'assistenza') return <Stato livello={1} etichetta="Assistenza" />
+  if (r.stato === 'arresto') return <Stato livello={2} etichetta="Arresto" />
+  if (r.operatore === 'tu')
+    return (
+      <span className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-info/15 px-2.5 text-xs font-medium text-info">
+        <span className="size-1.5 rounded-full bg-info" /> Tu
+      </span>
+    )
+  return <span className="num shrink-0 text-[11px] text-muted">Op. {Number(r.operatore) + 1}</span>
+}
+
+/** Anello del timer: in attesa conta verso i 20 secondi (rosso oltre), in gestione da quanto un operatore è sul veicolo. */
+function Timer({ r, t, grande = false }: { r: Aperta; t: number; grande?: boolean }) {
+  const raggio = 15
+  const giro = 2 * Math.PI * raggio
+  const attende = r.stato === 'in_attesa'
+  const fermo = r.stato === 'assistenza' || r.stato === 'arresto'
+  const mancano = Math.max(0, (r.riparte ?? t) - t)
+  const secondi = attende ? r.trascorsi : fermo ? mancano : Math.max(0, t - r.presa)
+  const quota = attende
+    ? Math.min(1, secondi / ATTESA_MAX_S)
+    : fermo
+      ? Math.min(1, mancano / Math.max(1, (r.riparte ?? t) - r.presa))
+      : r.operatore === 'tu'
+        ? 1
+        : Math.min(1, secondi / Math.max(1, r.durata_s))
+  const colore = attende
+    ? secondi > ATTESA_MAX_S
+      ? 'var(--color-critical)'
+      : 'var(--color-warn)'
+    : r.stato === 'in_gestione'
+      ? 'var(--color-info)'
+      : 'var(--color-offline)'
   return (
-    <div className="relative grid size-10 shrink-0 place-items-center">
+    <div className={`relative grid shrink-0 place-items-center ${grande ? 'size-20' : 'size-10'}`}>
       <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--color-line)" strokeWidth="2.5" />
-        <circle cx="20" cy="20" r={r} fill="none" stroke={colore} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={giro} strokeDashoffset={giro * (1 - quota)} />
+        <circle cx="20" cy="20" r={raggio} fill="none" stroke="var(--color-line)" strokeWidth={grande ? 2 : 2.5} />
+        <circle cx="20" cy="20" r={raggio} fill="none" stroke={colore} strokeWidth={grande ? 2 : 2.5} strokeLinecap="round" strokeDasharray={giro} strokeDashoffset={giro * (1 - quota)} />
       </svg>
-      <span className="num text-[11px] font-medium">{Math.floor(trascorsi)}</span>
+      <span className={`num font-medium ${grande ? 'text-xl' : 'text-[11px]'}`} style={grande && attende && secondi > ATTESA_MAX_S ? { color: 'var(--color-critical)' } : undefined}>
+        {secondi < 60 ? Math.floor(secondi) : `${Math.floor(secondi / 60)}:${String(Math.floor(secondi % 60)).padStart(2, '0')}`}
+      </span>
     </div>
   )
 }
 
 function ColonnaDestra({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSeleziona: (id: string | null) => void }) {
-  const { t } = useOra()
+  const { t, richieste } = useOra()
   const daGuardare = piuARischio(sc, t).filter((d) => d.livello >= 1).slice(0, 7)
+  const aperta = sel ? richieste.find((r) => r.veicolo_id === sel) : undefined
   return (
     <div className="absolute top-4 right-4 flex max-h-[calc(100%-200px)] w-[340px] flex-col gap-3">
       <AnimatePresence mode="popLayout">
-        {sel && <SchedaVeicolo key={sel} sc={sc} id={sel} t={t} onChiudi={() => onSeleziona(null)} />}
+        {sel && aperta && <SchedaIntervento key={`i-${aperta.id}`} sc={sc} r={apri(aperta, t)} t={t} onChiudi={() => onSeleziona(null)} />}
+        {sel && !aperta && <SchedaVeicolo key={sel} sc={sc} id={sel} t={t} onChiudi={() => onSeleziona(null)} />}
       </AnimatePresence>
       <motion.section {...entrata(1)} layout className="glass flex min-h-0 flex-col rounded-2xl">
         <header className="flex items-center justify-between px-4 pt-4 pb-3">
@@ -228,17 +316,174 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button className="col-span-2 flex h-9 items-center justify-center gap-2 rounded-lg bg-primary text-[13px] font-medium text-base transition-transform active:scale-[0.98]">
-          <Hand className="size-4" /> Prendi il controllo
-        </button>
-        <Azione icona={Navigation} testo="Devia" />
-        <Azione icona={ArrowUpRight} testo="Passa a collega" />
-        <Azione icona={Siren} testo="Assistenza" />
-        <button className="flex h-9 items-center justify-center gap-2 rounded-lg bg-critical text-[13px] font-medium text-white transition-transform active:scale-[0.98]">
-          <OctagonX className="size-4" /> Arresto
-        </button>
+    </motion.section>
+  )
+}
+
+/** La causa che il motore si aspettava, tra quelle che l'operatore può scegliere: si parte da qui. */
+function causaSuggerita(motivo: string, cause: string[]) {
+  const m = motivo.toLowerCase()
+  const regole: [string, string][] = [
+    ['attravers', 'Pedoni'],
+    ['doppia fila', 'Doppia fila'],
+    ['scuola', 'Uscita scuola'],
+    ['gps', 'GPS'],
+    ['pioggia', 'Pioggia'],
+    ['sottopasso', 'Pioggia'],
+    ['sole', 'Pioggia'],
+  ]
+  const r = regole.find(([chiave]) => m.includes(chiave))
+  return cause.find((c) => r && c.startsWith(r[1])) ?? cause.at(-1) ?? 'Altro'
+}
+
+const AZIONI: { azione: Azione; testo: string; icona: typeof Play; nota: string }[] = [
+  { azione: 'riparte', testo: 'Fai ripartire', icona: Play, nota: 'riparte subito' },
+  { azione: 'deviato', testo: 'Devia', icona: Navigation, nota: 'percorso alternativo' },
+  { azione: 'assistenza', testo: 'Assistenza in strada', icona: Siren, nota: 'resta fermo finché arriva' },
+  { azione: 'arresto', testo: 'Arresto', icona: OctagonX, nota: 'fermo per controllo' },
+]
+
+function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: number; onChiudi: () => void }) {
+  const { cause } = useOra()
+  const [azione, setAzione] = useState<Azione | null>(null)
+  const [causa, setCausa] = useState<string | null>(null)
+  const v = sc.perId.get(r.veicolo_id)
+  const pv = probabilita(sc, r.veicolo_id, t)
+  const suggerita = causaSuggerita(r.motivo_previsto, cause)
+  const mia = r.operatore === 'tu'
+  const titolo =
+    r.stato === 'in_attesa'
+      ? r.assegnata
+        ? 'Richiesta per te'
+        : 'Richiesta di intervento'
+      : r.stato === 'in_gestione'
+        ? mia
+          ? 'Intervento in corso'
+          : `Lo gestisce l'operatore ${Number(r.operatore) + 1}`
+        : r.stato === 'assistenza'
+          ? 'Fermo: assistenza in arrivo'
+          : 'Fermo dopo l\u2019arresto'
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: -10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="glass shrink-0 rounded-2xl p-4"
+      style={{
+        boxShadow: `0 0 0 1px color-mix(in srgb, ${r.stato === 'in_attesa' ? 'var(--color-critical)' : 'var(--color-info)'} 45%, transparent), 0 24px 48px -24px rgb(0 0 0 / 0.8)`,
+      }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="eyebrow">{v ? sc.flotte[v.flotta]?.nome : ''}</div>
+          <div className="num mt-1 text-xl font-medium">{sigla(r.veicolo_id)}</div>
+          <div className="mt-0.5 text-[13px] text-secondary">{titolo}</div>
+        </div>
+        <div className="flex items-start gap-2">
+          <Timer r={r} t={t} grande />
+          <button onClick={onChiudi} className="grid size-7 place-items-center rounded-lg text-muted hover:bg-elevated hover:text-primary">
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
+
+      <div className="mt-3 rounded-xl bg-elevated p-3">
+        <div className="eyebrow">Dove e perché</div>
+        <div className="mt-1.5 text-[13px]">{r.via || sc.nomiVie.get(r.seg_id) || 'Via senza nome'}</div>
+        <div className="mt-0.5 text-xs text-muted">
+          {r.motivo_previsto ? `Il motore se lo aspettava: ${r.motivo_previsto}` : 'Il motore non aveva un motivo prevalente'}
+          {pv != null && ` · score ${score(pv)}`}
+        </div>
+      </div>
+
+      {r.stato === 'in_attesa' && (
+        <button
+          onClick={() => interventi.prendi(r.id)}
+          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-[13px] font-medium text-base transition-transform active:scale-[0.98]"
+        >
+          Prendi la richiesta
+          {r.assegnata && (
+            <kbd className="rounded border border-base/20 px-1.5 py-0.5 text-[10px]">
+              <CornerDownLeft className="inline size-3" />
+            </kbd>
+          )}
+        </button>
+      )}
+
+      {r.stato === 'in_gestione' && mia && !azione && (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {AZIONI.map(({ azione: a, testo, icona: Icona, nota }) => (
+              <button
+                key={a}
+                onClick={() => {
+                  setAzione(a)
+                  setCausa(suggerita)
+                }}
+                className={`flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left transition-transform active:scale-[0.98] ${
+                  a === 'riparte'
+                    ? 'bg-primary text-base'
+                    : a === 'arresto'
+                      ? 'bg-critical text-white'
+                      : 'text-primary ring-1 ring-line-strong hover:bg-elevated'
+                }`}
+              >
+                <span className="flex items-center gap-2 text-[13px] font-medium">
+                  <Icona className="size-4" /> {testo}
+                </span>
+                <span className={`text-[11px] ${a === 'riparte' ? 'text-base/60' : a === 'arresto' ? 'text-white/70' : 'text-muted'}`}>{nota}</span>
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => interventi.rilascia(r.id)}
+            className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs text-muted transition-colors hover:text-primary"
+          >
+            <ArrowUpRight className="size-3.5" /> Passa a un collega
+          </button>
+        </>
+      )}
+
+      {r.stato === 'in_gestione' && mia && azione && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <span className="eyebrow">Perché si è fermato?</span>
+            <button onClick={() => setAzione(null)} className="flex items-center gap-1 text-[11px] text-muted hover:text-primary">
+              <ArrowLeft className="size-3" /> azioni
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {cause.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCausa(c)}
+                className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
+                  c === causa ? 'bg-info/15 text-info ring-1 ring-info/60' : 'text-secondary ring-1 ring-line-strong hover:text-primary'
+                }`}
+              >
+                {c}
+                {c === suggerita && <span className="ml-1.5 text-[10px] opacity-70">prevista</span>}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => causa && interventi.chiudi(r.id, azione, causa)}
+            className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-[13px] font-medium text-base transition-transform active:scale-[0.98]"
+          >
+            <Check className="size-4" /> Chiudi l'intervento · {AZIONI.find((x) => x.azione === azione)?.testo.toLowerCase()}
+          </button>
+        </div>
+      )}
+
+      {r.stato === 'in_gestione' && !mia && (
+        <div className="mt-4 text-xs text-muted">Un collega è già sul veicolo. Lo vedi ripartire quando chiude l'intervento.</div>
+      )}
+      {(r.stato === 'assistenza' || r.stato === 'arresto') && (
+        <div className="mt-4 text-xs text-muted">
+          Intervento chiuso da te. Il veicolo resta fermo finché {r.stato === 'assistenza' ? 'arriva l\u2019assistenza in strada' : 'non finisce il controllo'}, poi riparte da solo.
+        </div>
+      )}
     </motion.section>
   )
 }
@@ -284,13 +529,6 @@ function BarraScore({ valore, sc }: { valore: number; sc: Scenario }) {
   )
 }
 
-function Azione({ icona: Icona, testo }: { icona: typeof Hand; testo: string }) {
-  return (
-    <button className="flex h-9 items-center justify-center gap-2 rounded-lg text-[13px] font-medium text-primary ring-1 ring-line-strong transition-colors hover:bg-elevated">
-      <Icona className="size-4 text-secondary" /> {testo}
-    </button>
-  )
-}
 
 function Fondo({ sc }: { sc: Scenario }) {
   const { t } = useOra()
