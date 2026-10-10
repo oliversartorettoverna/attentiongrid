@@ -14,12 +14,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import yaml
-from fastapi import FastAPI, WebSocket
+from fastapi import Body, FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.diretta import Diretta, Giornata
-from server.registro import Registro
+from server.copilota import Copilota, sigla
+from server.registro import Registro, leggi_env
 
 RADICE = Path(__file__).resolve().parents[1]
 DATI = RADICE / "console" / "data"
@@ -31,6 +32,10 @@ registro = Registro(Path(os.environ.get("AG_REGISTRO", Path(__file__).with_name(
                     str(yaml.safe_load(open(CONFIG, encoding="utf-8"))["giorno"]["data"]),
                     {v["veicolo_id"]: v["flotta"] for v in json.load(open(DATI / "scenario" / "veicoli.json"))["veicoli"]})
 diretta = Diretta(Giornata(DATI, CONFIG, registro))
+_cfg = yaml.safe_load(open(CONFIG, encoding="utf-8"))
+_veicoli = json.load(open(DATI / "scenario" / "veicoli.json"))
+NOME_FLOTTA = {v["veicolo_id"]: _veicoli["flotte"][v["flotta"]]["nome"] for v in _veicoli["veicoli"]}
+copilota = Copilota(_cfg.get("copilota", {}), leggi_env(RADICE / ".env"))
 
 
 @asynccontextmanager
@@ -46,6 +51,24 @@ app = FastAPI(title="AttentionGrid", lifespan=ciclo_di_vita)
 def interventi(giornata: str = "previsto"):
     """Gli interventi chiusi dall'operatore in console in quella giornata, con la causa confermata."""
     return registro.della_giornata(giornata)
+
+
+@app.post("/api/copilota/{richiesta_id}")
+async def suggerimento(richiesta_id: int, dati: dict = Body(default={})):
+    """Il copilota legge la richiesta aperta e quello che si sa della via, e suggerisce un'azione."""
+    g = diretta.giornata
+    aperta = next((r for r in g.stato_a(g.t)["richieste"] if r["id"] == richiesta_id), None)
+    if aperta is None:
+        raise HTTPException(404, "richiesta non più aperta")
+    via = aperta["via"]
+    oggi = [r for lista in g.giornate[g.temporale].values() for r in lista
+            if r["via"] == via and r["inizio_piano"] < aperta["inizio_piano"]]
+    confermate = [r["causa"] for r in registro.della_giornata(g.temporale) if r["via"] == via]
+    ctx = {"veicolo": sigla(aperta["veicolo_id"]), "flotta": NOME_FLOTTA.get(aperta["veicolo_id"], ""), "via": via,
+           "motivo_previsto": aperta["motivo_previsto"], "score": dati.get("score"), "pioggia_mm": dati.get("pioggia_mm"),
+           "ora": f"{int(g.t) // 3600:02d}:{int(g.t) % 3600 // 60:02d}", "secondi_di_attesa": round(g.t - aperta["inizio"]),
+           "richieste_oggi_sulla_via": len(oggi), "cause_confermate_oggi_sulla_via": confermate[-5:]}
+    return await copilota.suggerisci((g.temporale, richiesta_id), ctx)
 
 
 @app.websocket("/api/diretta")

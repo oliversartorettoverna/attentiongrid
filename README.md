@@ -83,7 +83,8 @@ python tools/sensibilita.py
 # per salvare gli interventi su Supabase: crea il file .env alla radice (fuori da git) con
 #   SUPABASE_URL=https://<progetto>.supabase.co
 #   SUPABASE_CHIAVE=<chiave pubblicabile, dalla dashboard di Supabase>
-# senza .env il registro resta solo in locale
+#   ANTHROPIC_API_KEY=<chiave Anthropic, per il copilota AI>
+# senza .env il registro resta solo in locale e il copilota usa il ripiego
 npm --prefix web install
 npm --prefix web run build
 .venv/bin/uvicorn server.main:app --port 8001
