@@ -598,6 +598,10 @@ function BarraScore({ valore, sc }: { valore: number; sc: Scenario }) {
           <span key={x} className="absolute -top-1 h-3.5 w-px bg-line-strong" style={{ left: `${x}%` }} />
         ))}
       </div>
+      <div className="num mt-1.5 flex justify-between text-[10px] text-muted">
+        <span>0</span>
+        <span>100</span>
+      </div>
     </div>
   )
 }
