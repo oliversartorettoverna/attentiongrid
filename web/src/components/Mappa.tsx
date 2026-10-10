@@ -4,15 +4,13 @@ import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap, MapLayerMouseEvent, MapMouseEvent } from 'maplibre-gl'
 import indirizzoWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { indiceFascia, livello, posizione, tratti_davanti, type Scenario } from '../lib/scenario'
+import { indiceFascia, livello, posizione, type Scenario } from '../lib/scenario'
 import { orologio } from '../lib/orologio'
 
-// Si colorano solo i tratti a rischio che un veicolo percorrerà nei prossimi minuti: è dove servirà un umano.
-// Soglie grafiche in millesimi di probabilità per passaggio (60‰ ≈ 95° percentile della giornata, 100‰ ≈ 99°):
-// sotto i 60 il tratto resta neutro. Non toccano il modello, solo il disegno.
+// Soglie grafiche della mappa (millesimi di probabilità per passaggio): sotto i 60 la strada resta neutra.
+// 60‰ ≈ 95° percentile della giornata, 100‰ ≈ 99°. Non toccano il modello, solo il disegno.
 const STRADA_ATTENZIONE = 60
 const STRADA_CRITICA = 100
-const SECONDI_DAVANTI = 180 // come l'orizzonte della griglia dell'attenzione
 
 // Il worker di MapLibre (calcoli della mappa in un thread separato) impacchettato da Vite insieme all'app
 maplibregl.setWorkerUrl(indirizzoWorker)
@@ -226,27 +224,14 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       m.on('mouseenter', 'veicoli', () => (m.getCanvas().style.cursor = 'pointer'))
       m.on('mouseleave', 'veicoli', () => (m.getCanvas().style.cursor = ''))
 
-      let accesi = new Map<string, number>()
-      let ultimoAggiornamento = -1e9
+      let fascia = -1
       let raf = 0
-      const aggiornaStrade = (t: number) => {
-        const nuovi = new Map<string, number>()
-        for (const v of sc.veicoli) {
-          if (livello(sc, v.veicolo_id, t) < 0) continue
-          for (const [seg, quando] of tratti_davanti(v, t, SECONDI_DAVANTI)) {
-            const p = sc.rischio[seg]?.[indiceFascia(sc, quando)] ?? 0
-            if (p >= STRADA_ATTENZIONE && p > (nuovi.get(seg) ?? 0)) nuovi.set(seg, p)
-          }
-        }
-        for (const seg of accesi.keys()) if (!nuovi.has(seg)) m.setFeatureState({ source: 'tratti', id: seg }, { p: 0 })
-        for (const [seg, p] of nuovi) if (accesi.get(seg) !== p) m.setFeatureState({ source: 'tratti', id: seg }, { p })
-        accesi = nuovi
-      }
       const disegna = () => {
         const t = orologio.ora()
-        if (Math.abs(t - ultimoAggiornamento) >= 5) {
-          ultimoAggiornamento = t
-          aggiornaStrade(t)
+        const f = indiceFascia(sc, t)
+        if (f !== fascia) {
+          fascia = f
+          for (const [seg, valori] of Object.entries(sc.rischio)) m.setFeatureState({ source: 'tratti', id: seg }, { p: valori[f] })
         }
         const features: GeoJSON.Feature[] = []
         for (const v of sc.veicoli) {

@@ -166,23 +166,6 @@ export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number]
   return [a[1] + (b[1] - a[1]) * f, a[0] + (b[0] - a[0]) * f]
 }
 
-/** Tratti che il veicolo percorre tra t e t + durata, con il secondo di ingresso. */
-export function tratti_davanti(v: Veicolo, t: number, durata: number): [string, number][] {
-  const p = v.passate
-  const rel = t - v.t0 - v.sposta
-  let lo = 0
-  let hi = p.length / 2
-  while (lo < hi) {
-    const m = (lo + hi) >> 1
-    if (p[2 * m] < rel) lo = m + 1
-    else hi = m
-  }
-  const out: [string, number][] = []
-  for (let i = lo; i < p.length / 2 && p[2 * i] < rel + durata; i++)
-    out.push([`seg_${String(p[2 * i + 1]).padStart(6, '0')}`, p[2 * i] + v.t0 + v.sposta])
-  return out
-}
-
 export function livello(sc: Scenario, id: string, t: number): Livello {
   const s = sc.livelli[id]
   const c = s?.[Math.floor((t - sc.inizio_s) / 60)]
