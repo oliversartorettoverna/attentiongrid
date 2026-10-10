@@ -25,6 +25,14 @@ export interface RichiestaDiretta {
   riparte?: number // per assistenza e arresto: quando il veicolo riparte (secondo della giornata)
 }
 
+/** Stato del registro sul server: quanti interventi salvati in locale e quanti già su Supabase. */
+export interface StatoRegistro {
+  salvati: number
+  su_supabase: number
+  collegato: boolean
+  errore: string
+}
+
 export type Azione = 'riparte' | 'deviato' | 'assistenza' | 'arresto'
 
 export interface InterventoChiuso {
@@ -46,6 +54,7 @@ interface StatoServer {
   temporali: string[]
   cause?: string[]
   chiusi?: InterventoChiuso[]
+  registro?: StatoRegistro | null
   velocita: number
   in_corsa: boolean
   ritardi: Record<string, number>
@@ -64,8 +73,9 @@ let temporale = 'previsto'
 let temporali: string[] = ['previsto']
 let cause: string[] = []
 let chiusi: InterventoChiuso[] = []
+let registro: StatoRegistro | null = null
 let ws: WebSocket | null = null
-let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi }
+let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro: registro as StatoRegistro | null }
 const ascoltatori = new Set<() => void>()
 
 const ora = () => {
@@ -74,7 +84,7 @@ const ora = () => {
 }
 
 function pubblica() {
-  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi }
+  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro }
   ascoltatori.forEach((f) => f())
 }
 
@@ -88,6 +98,7 @@ function ricevi(s: StatoServer) {
   temporali = s.temporali ?? ['previsto']
   cause = s.cause ?? []
   chiusi = s.chiusi ?? []
+  registro = s.registro ?? null
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
     temporale = s.temporale

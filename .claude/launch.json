@@ -38,7 +38,7 @@
       "runtimeExecutable": "/bin/sh",
       "runtimeArgs": [
         "-c",
-        "PYTHONPATH=.venv/lib/python3.11/site-packages exec /opt/homebrew/opt/python@3.11/bin/python3.11 -m uvicorn server.main:app --port 8002"
+        "AG_REGISTRO=/private/tmp/claude-501/-Users-oliver-Documents-attentiongrid/59cbf556-e2c9-45b4-aebb-435a9f6fb4d5/scratchpad/registro_prova.jsonl PYTHONPATH=.venv/lib/python3.11/site-packages exec /opt/homebrew/opt/python@3.11/bin/python3.11 -m uvicorn server.main:app --port 8002"
       ],
       "port": 8002
     },

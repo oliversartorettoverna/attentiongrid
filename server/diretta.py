@@ -61,7 +61,8 @@ AZIONI = ("riparte", "deviato", "assistenza", "arresto")
 
 
 class Giornata:
-    def __init__(self, dati: Path, config: Path):
+    def __init__(self, dati: Path, config: Path, registro=None):
+        self.registro = registro    # server/registro.py: file locale e Supabase
         cfg = yaml.safe_load(open(config, encoding="utf-8")).get("console", {})
         # dopo la chiusura il veicolo resta fermo ancora per un po' con queste azioni
         self.fermo_dopo = {"assistenza": cfg.get("fermo_assistenza_min", 10) * 60,
@@ -118,11 +119,14 @@ class Giornata:
               and c.get("azione") in AZIONI):
             m = miei[aperta["id"]]
             m.update(chiuso=self.t, azione=c["azione"], causa=str(c.get("causa") or "Altro"))
-            self.chiusi[self.temporale].append({
+            chiuso = {
                 "id": aperta["id"], "veicolo_id": aperta["veicolo_id"], "seg_id": aperta["seg_id"], "via": aperta["via"],
                 "chiamata": aperta["inizio"], "attesa_s": round(m["preso"] - aperta["inizio"]),
                 "durata_s": round(self.t - m["preso"]), "azione": m["azione"], "causa": m["causa"],
-                "motivo_previsto": aperta["motivo_previsto"], "operatore": "tu"})
+                "motivo_previsto": aperta["motivo_previsto"], "operatore": "tu"}
+            self.chiusi[self.temporale].append(chiuso)
+            if self.registro:
+                self.registro.aggiungi(self.temporale, chiuso)
 
     # stato ----------------------------------------------------------------------------------
     def stato_a(self, t: float) -> dict:
@@ -185,7 +189,8 @@ class Giornata:
         return {"t": round(self.t, 2), "velocita": self.velocita, "in_corsa": self.in_corsa,
                 "temporale": self.temporale, "scenario": GIORNATE[self.temporale],
                 "temporali": list(self.giornate), "cause": self.cause,
-                "chiusi": self.chiusi[self.temporale][-50:], **self.stato_a(self.t)}
+                "chiusi": self.chiusi[self.temporale][-50:],
+                "registro": self.registro.stato() if self.registro else None, **self.stato_a(self.t)}
 
 
 class Diretta:
@@ -198,6 +203,8 @@ class Diretta:
 
     async def avvia(self):
         self._compito = asyncio.create_task(self._trasmetti())
+        if self.giornata.registro:
+            self._sincronizza = asyncio.create_task(self.giornata.registro.sincronizza())
 
     async def _trasmetti(self):
         while True:

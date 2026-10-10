@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Search } from 'lucide-react'
+import { CloudCheck, CloudOff, Download, Search } from 'lucide-react'
 import { Pagina, Numero, Titolo } from '../components/Pagina'
-import { sigla } from '../lib/scenario'
+import { hhmm, sigla } from '../lib/scenario'
 import { useRuolo } from '../lib/ruolo'
 import { useOra } from '../lib/orologio'
+import { causaSuggerita } from '../lib/cause'
 
 interface Riga {
   ora: string
@@ -15,6 +16,18 @@ interface Riga {
   attesa_s: string
   durata_s: string
   operatore: string
+  causa_confermata?: string // confermata dall'operatore in console (server/registro.py, Supabase)
+  azione?: string
+}
+
+interface Confermato {
+  richiesta_id: number
+  causa: string
+  azione: string
+  attesa_s: number
+  durata_s: number
+  operatore: string
+  chiamata_s: number
 }
 
 const PAGINA = 80
@@ -22,7 +35,9 @@ const PAGINA = 80
 export function Registro() {
   const [righe, setRighe] = useState<Riga[]>([])
   const [ruolo] = useRuolo()
-  const { scenario } = useOra()
+  const { scenario, temporale, chiusi, cause, registro } = useOra()
+  const [confermati, setConfermati] = useState<Confermato[]>([])
+  const [soloConfermati, setSoloConfermati] = useState(false)
   const [gestore, setGestore] = useState('tutti')
   const [cerca, setCerca] = useState('')
   const [quante, setQuante] = useState(PAGINA)
@@ -37,16 +52,46 @@ export function Registro() {
       })
   }, [scenario])
 
+  // gli interventi chiusi dall'operatore: si ricaricano quando ne chiude uno nuovo
+  useEffect(() => {
+    fetch(`/api/interventi?giornata=${temporale}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setConfermati, () => setConfermati([]))
+  }, [temporale, chiusi.length])
+
+  // ogni riga del registro del motore è una richiesta (stesso ordine di rigioco.json): le confermate prendono
+  // causa, azione, attesa e durata dell'operatore
+  const unite = useMemo(() => {
+    const perId = new Map(confermati.map((c) => [c.richiesta_id, c]))
+    return righe.map((r, i) => {
+      const c = perId.get(i)
+      return c
+        ? {
+            ...r,
+            ora: hhmm(c.chiamata_s, true), // l'ora vera della chiamata, spostata dal ritardo del veicolo
+            causa_confermata: c.causa,
+            azione: c.azione,
+            attesa_s: String(c.attesa_s),
+            durata_s: String(c.durata_s),
+            operatore: 'tu',
+          }
+        : r
+    })
+  }, [righe, confermati])
+
   const gestori = useMemo(() => [...new Set(righe.map((r) => r.gestore))], [righe])
   const visibili = useMemo(() => {
     const q = cerca.toLowerCase()
-    return righe.filter(
+    return unite.filter(
       (r) =>
+        (!soloConfermati || r.causa_confermata) &&
         (ruolo !== 'cliente' || r.gestore.startsWith('Poste')) &&
         (gestore === 'tutti' || r.gestore === gestore) &&
         (!q || r.via.toLowerCase().includes(q) || r.veicolo.includes(q) || r.motivo_previsto.toLowerCase().includes(q)),
     )
-  }, [righe, gestore, cerca, ruolo])
+  }, [unite, gestore, cerca, ruolo, soloConfermati])
+  const lemie = unite.filter((r) => r.causa_confermata)
+  const uguali = lemie.filter((r) => r.causa_confermata === causaSuggerita(r.motivo_previsto, cause)).length
 
   const entro20 = visibili.length ? (100 * visibili.filter((r) => +r.attesa_s <= 20).length) / visibili.length : 0
   const attesaMedia = visibili.length ? visibili.reduce((a, r) => a + +r.attesa_s, 0) / visibili.length : 0
@@ -72,10 +117,31 @@ export function Registro() {
         per il cliente e per l'autorità.
       </Titolo>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         <Numero etichetta="Interventi" valore={visibili.length.toLocaleString('it-IT')} />
         <Numero etichetta="Presi entro 20 s" valore={entro20.toFixed(1).replace('.', ',')} unita="%" sotto="obiettivo 90%" />
         <Numero etichetta="Attesa media" valore={attesaMedia.toFixed(1).replace('.', ',')} unita="s" />
+        <Numero
+          etichetta="Confermati in console"
+          valore={lemie.length}
+          sotto={
+            <span className="flex flex-col gap-0.5">
+              <span>
+                causa uguale alla prevista: <span className="num text-primary">{lemie.length ? Math.round((100 * uguali) / lemie.length) : 0}%</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                {registro?.collegato && !registro.errore ? (
+                  <CloudCheck className="size-3.5 text-ok" />
+                ) : (
+                  <CloudOff className="size-3.5 text-muted" />
+                )}
+                {registro?.collegato
+                  ? `su Supabase ${registro.su_supabase} di ${registro.salvati}${registro.errore ? ' · rete assente, riprova' : ''}`
+                  : 'solo in locale'}
+              </span>
+            </span>
+          }
+        />
         <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">
           <div className="text-xs text-muted">Causa prevista più frequente</div>
           <div className="mt-2 space-y-1.5">
@@ -113,6 +179,12 @@ export function Registro() {
               ))}
             </div>
           )}
+          <button
+            onClick={() => setSoloConfermati((x) => !x)}
+            className={`flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium ring-1 transition-colors ${soloConfermati ? 'bg-info/15 text-info ring-info/60' : 'ring-line-strong hover:bg-elevated'}`}
+          >
+            Solo confermati
+          </button>
           <button onClick={esporta} className="flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium ring-1 ring-line-strong hover:bg-elevated">
             <Download className="size-4 text-secondary" /> CSV
           </button>
@@ -120,7 +192,7 @@ export function Registro() {
         <table className="w-full text-left text-[13px]">
           <thead>
             <tr className="eyebrow border-b border-line">
-              {['Ora', 'Veicolo', 'Flotta', 'Via', 'Causa prevista', 'P', 'Attesa', 'Durata', 'Op.'].map((h) => (
+              {['Ora', 'Veicolo', 'Flotta', 'Via', 'Causa prevista', 'Causa confermata', 'P', 'Attesa', 'Durata', 'Op.'].map((h) => (
                 <th key={h} className="px-4 py-2.5 font-medium">
                   {h}
                 </th>
@@ -131,12 +203,22 @@ export function Registro() {
             {visibili.slice(0, quante).map((r, i) => {
               const lenta = +r.attesa_s > 20
               return (
-                <tr key={i} className="border-b border-line/60 transition-colors hover:bg-elevated/60">
+                <tr key={i} className={`border-b border-line/60 transition-colors hover:bg-elevated/60 ${r.causa_confermata ? 'bg-info/[0.06]' : ''}`}>
                   <td className="num px-4 py-2 text-secondary">{r.ora}</td>
                   <td className="num px-4 py-2 font-medium">{sigla(r.veicolo)}</td>
                   <td className="px-4 py-2 text-secondary">{r.gestore}</td>
                   <td className="max-w-[220px] truncate px-4 py-2">{r.via}</td>
-                  <td className="max-w-[240px] truncate px-4 py-2 text-secondary">{r.motivo_previsto}</td>
+                  <td className="max-w-[200px] truncate px-4 py-2 text-secondary">{r.motivo_previsto}</td>
+                  <td className="max-w-[200px] truncate px-4 py-2">
+                    {r.causa_confermata ? (
+                      <span className="inline-flex items-center gap-1.5 text-info">
+                        <span className="size-1.5 rounded-full bg-info" />
+                        {r.causa_confermata}
+                      </span>
+                    ) : (
+                      <span className="text-line-strong">—</span>
+                    )}
+                  </td>
                   <td className="num px-4 py-2 text-muted">{(+r.probabilita_prevista * 100).toFixed(1)}%</td>
                   <td className="num px-4 py-2" style={{ color: lenta ? 'var(--color-warn)' : undefined }}>
                     {r.attesa_s} s
