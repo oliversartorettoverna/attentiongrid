@@ -1,6 +1,6 @@
 # Architettura
 
-Il motore **precalcola** la giornata della centrale; il server locale la dà all'app, che la **rigioca**. Mappa, motore e app girano sul laptop: la demo non dipende da internet durante il pitch.
+Il motore **precalcola** la giornata della centrale; il server locale la fa **scorrere in diretta** e l'app la mostra. Mappa, motore e app girano sul laptop: la demo non dipende da internet durante il pitch.
 
 ```mermaid
 flowchart LR
@@ -19,8 +19,8 @@ flowchart LR
   P --> N[engine: attenzione<br/>livello per veicolo]
   G --> D[console/data/scenario]
   N --> D
-  D --> V[server FastAPI]
-  V --> W[app web]
+  D --> V[server FastAPI:<br/>diretta]
+  V -- WebSocket --> W[app web]
 ```
 
 ## I pezzi
@@ -41,7 +41,9 @@ flowchart LR
 
 **8. Griglia dell'attenzione** (`engine/attenzione.py`). Per ogni veicolo e ogni minuto, la probabilità di una richiesta nei prossimi 3 minuti: da qui il livello (nominale, attenzione, critico) e l'Autonomy Confidence Score che l'operatore vede.
 
-**9. App** (`web/`, `server/`). Il server FastAPI dà all'app i file di `console/data/scenario/`. L'app (React) disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
+**9. Diretta** (`server/diretta.py`). Il server tiene l'orologio della giornata e lo stato delle richieste, come una piattaforma di teleguida: un veicolo che chiede aiuto si ferma finché l'intervento non è finito e poi riparte in ritardo sul suo piano. Manda lo stato a tutte le schermate con una WebSocket; avvio, pausa, velocità e salti nel tempo arrivano dalle schermate.
+
+**10. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
 
 ## Strumenti di verifica
 

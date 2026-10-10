@@ -79,10 +79,9 @@ export function Shell() {
 function BarraAlta() {
   const { pathname } = useLocation()
   const sc = useScenario()
-  const { t, velocita, inCorsa } = useOra()
+  const { t, velocita, inCorsa, collegato } = useOra()
   const schermata = SCHERMATE.find((s) => pathname.startsWith(s.to))
   const pioggia = sc ? sc.pioggia_mm[indiceFascia(sc, t)] : null
-  const motore = useMotore()
 
   useEffect(() => {
     const tasti = (e: KeyboardEvent) => {
@@ -152,23 +151,12 @@ function BarraAlta() {
           </span>
         )}
         <span className="inline-flex h-7 items-center gap-2 rounded-full px-3 text-xs text-secondary ring-1 ring-line ring-inset">
-          <Punto colore={motore ? 'var(--color-ok)' : 'var(--color-offline)'} />
-          {motore ? 'Motore locale' : 'Motore offline'}
+          <Punto colore={collegato ? 'var(--color-ok)' : 'var(--color-offline)'} pulsa={collegato && inCorsa} />
+          {collegato ? 'Diretta · motore locale' : 'Motore offline'}
         </span>
       </div>
     </header>
   )
-}
-
-function useMotore() {
-  const [ok, setOk] = useState(false)
-  useEffect(() => {
-    const prova = () => fetch('/api/salute').then((r) => setOk(r.ok), () => setOk(false))
-    prova()
-    const id = setInterval(prova, 5000)
-    return () => clearInterval(id)
-  }, [])
-  return ok
 }
 
 function SceltaRuolo() {

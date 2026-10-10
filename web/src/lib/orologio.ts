@@ -1,45 +1,101 @@
-// Orologio della giornata simulata. La mappa lo legge a ogni fotogramma (ora()), i pannelli
-// si aggiornano 4 volte al secondo (useOra) per non ridisegnare tutto 60 volte al secondo.
+// Orologio della giornata. Lo tiene il server (WebSocket /api/diretta, server/diretta.py): tutte le
+// schermate aperte vedono la stessa ora, le stesse richieste e gli stessi ritardi dei veicoli.
+// La mappa legge l'ora a ogni fotogramma (ora()), i pannelli 4 volte al secondo (useOra).
+// Se il server non risponde, l'orologio gira nel browser come ripiego.
 import { useSyncExternalStore } from 'react'
 
 export const VELOCITA = [1, 10, 30, 60] as const
 const INIZIO_DEMO = 15 * 3600 + 40 * 60 // 15:40, poco prima del temporale
 const FINE = 24 * 3600 - 1
 
-let t = INIZIO_DEMO
-let velocita: number = 30
+export interface RichiestaDiretta {
+  id: number
+  veicolo_id: string
+  seg_id: string
+  inizio: number // secondo della giornata in cui il veicolo ha chiamato
+  attesa_s: number
+  durata_s: number
+  operatore: number
+  stato: 'in_attesa' | 'in_gestione'
+}
+
+interface StatoServer {
+  t: number
+  velocita: number
+  in_corsa: boolean
+  ritardi: Record<string, number>
+  richieste: RichiestaDiretta[]
+}
+
+let base = { t: INIZIO_DEMO, quando: performance.now() } // ultima ora nota e quando l'abbiamo saputa
+let velocita = 30
 let inCorsa = false
-let ultimo = performance.now()
-let pubblicato = { t, velocita, inCorsa }
+let ritardi: Record<string, number> = {}
+let richieste: RichiestaDiretta[] = []
+let collegato = false
+let ws: WebSocket | null = null
+let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste }
 const ascoltatori = new Set<() => void>()
 
+const ora = () => {
+  const t = inCorsa ? base.t + ((performance.now() - base.quando) / 1000) * velocita : base.t
+  return Math.min(FINE, t)
+}
+
 function pubblica() {
-  pubblicato = { t, velocita, inCorsa }
+  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste }
   ascoltatori.forEach((f) => f())
 }
 
-function passo(ora: number) {
-  if (inCorsa) t = Math.min(FINE, t + ((ora - ultimo) / 1000) * velocita)
-  ultimo = ora
-  requestAnimationFrame(passo)
+function ricevi(s: StatoServer) {
+  base = { t: s.t, quando: performance.now() }
+  velocita = s.velocita
+  inCorsa = s.in_corsa
+  ritardi = s.ritardi
+  richieste = s.richieste
 }
-requestAnimationFrame(passo)
-setInterval(() => inCorsa && pubblica(), 250)
+
+function collega() {
+  const indirizzo = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/diretta`
+  ws = new WebSocket(indirizzo)
+  ws.onopen = () => {
+    collegato = true
+    pubblica()
+  }
+  ws.onmessage = (e) => ricevi(JSON.parse(e.data))
+  ws.onclose = () => {
+    collegato = false
+    ws = null
+    pubblica()
+    setTimeout(collega, 2000)
+  }
+}
+collega()
+setInterval(pubblica, 250)
+
+/** Esegue il comando subito nel browser (così più tasti di fila si sommano) e lo manda al server,
+ *  che lo rimanda a tutte le schermate. */
+function comanda(comando: string, valore?: number | boolean) {
+  const t = ora()
+  if (comando === 'avvia') inCorsa = !inCorsa
+  if (comando === 'velocita') velocita = valore as number
+  if (comando === 'vai') valore = Math.max(6 * 3600, Math.min(FINE, valore as number))
+  base = { t: comando === 'vai' ? (valore as number) : t, quando: performance.now() }
+  if (ws && collegato) {
+    // all'avvio si manda lo stato voluto, non "inverti": due schermate che premono insieme non si annullano
+    const v = comando === 'avvia' ? inCorsa : valore
+    ws.send(JSON.stringify(v === undefined ? { comando } : { comando, valore: v }))
+  }
+  pubblica()
+}
 
 export const orologio = {
-  ora: () => t,
-  vai: (nuovo: number) => {
-    t = Math.max(6 * 3600, Math.min(FINE, nuovo))
-    pubblica()
-  },
-  avvia: () => {
-    inCorsa = !inCorsa
-    pubblica()
-  },
-  velocita: (v: number) => {
-    velocita = v
-    pubblica()
-  },
+  ora,
+  /** Secondi persi dal veicolo fermo ad aspettare o durante gli interventi: il suo piano slitta di tanto. */
+  ritardo: (id: string) => ritardi[id] ?? 0,
+  vai: (t: number) => comanda('vai', t),
+  avvia: () => comanda('avvia'),
+  velocita: (v: number) => comanda('velocita', v),
 }
 
 export function useOra() {
