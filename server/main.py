@@ -21,7 +21,7 @@ RADICE = Path(__file__).resolve().parents[1]
 DATI = RADICE / "console" / "data"
 APP_COSTRUITA = RADICE / "web" / "dist"
 
-diretta = Diretta(Giornata(DATI))
+diretta = Diretta(Giornata(DATI, RADICE / "config" / "scenario.yaml"))
 
 
 @asynccontextmanager

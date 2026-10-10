@@ -16,8 +16,26 @@ export interface RichiestaDiretta {
   inizio_piano: number // la stessa ora sul piano del veicolo: finché la richiesta è aperta resta lì
   attesa_s: number
   durata_s: number
-  operatore: number
-  stato: 'in_attesa' | 'in_gestione'
+  operatore: number | 'tu' // 'tu' = l'operatore in console
+  assegnata?: boolean // assegnata alla postazione della console: aspetta te, poi la prende un collega
+  via: string
+  motivo_previsto: string
+  // in gestione; oppure chiusa da te ma il veicolo è ancora fermo per assistenza in strada o arresto
+  stato: 'in_attesa' | 'in_gestione' | 'assistenza' | 'arresto'
+}
+
+export type Azione = 'riparte' | 'deviato' | 'assistenza' | 'arresto'
+
+export interface InterventoChiuso {
+  id: number
+  veicolo_id: string
+  via: string
+  chiamata: number
+  attesa_s: number
+  durata_s: number
+  azione: Azione
+  causa: string
+  motivo_previsto: string
 }
 
 interface StatoServer {
@@ -25,6 +43,8 @@ interface StatoServer {
   temporale: string
   scenario: string
   temporali: string[]
+  cause?: string[]
+  chiusi?: InterventoChiuso[]
   velocita: number
   in_corsa: boolean
   ritardi: Record<string, number>
@@ -41,8 +61,10 @@ let collegato = false
 let scenario = 'scenario' // la cartella dei dati della giornata in corso
 let temporale = 'previsto'
 let temporali: string[] = ['previsto']
+let cause: string[] = []
+let chiusi: InterventoChiuso[] = []
 let ws: WebSocket | null = null
-let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali }
+let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi }
 const ascoltatori = new Set<() => void>()
 
 const ora = () => {
@@ -51,7 +73,7 @@ const ora = () => {
 }
 
 function pubblica() {
-  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali }
+  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi }
   ascoltatori.forEach((f) => f())
 }
 
@@ -63,6 +85,8 @@ function ricevi(s: StatoServer) {
   richieste = s.richieste
   fermi = new Map(s.richieste.map((r) => [r.veicolo_id, r.inizio_piano]))
   temporali = s.temporali ?? ['previsto']
+  cause = s.cause ?? []
+  chiusi = s.chiusi ?? []
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
     temporale = s.temporale
@@ -102,6 +126,17 @@ function comanda(comando: string, valore?: number | boolean | string) {
     ws.send(JSON.stringify(v === undefined ? { comando } : { comando, valore: v }))
   }
   pubblica()
+}
+
+/** Comandi sugli interventi: valgono solo collegati al server, che decide e rimanda lo stato a tutti. */
+function intervento(comando: 'prendi' | 'chiudi' | 'rilascia', id: number, extra: Record<string, string> = {}) {
+  if (ws && collegato) ws.send(JSON.stringify({ comando, id, ...extra }))
+}
+
+export const interventi = {
+  prendi: (id: number) => intervento('prendi', id),
+  rilascia: (id: number) => intervento('rilascia', id),
+  chiudi: (id: number, azione: Azione, causa: string) => intervento('chiudi', id, { azione, causa }),
 }
 
 export const orologio = {

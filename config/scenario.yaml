@@ -103,3 +103,16 @@ rigioco:
   giornate_pianificazione: 20 # il piano dei turni si prova su 20 giornate simulate dalla previsione, mai su quella del rigioco
   quota_giornate: 0.95        # ogni ora deve rispettare il servizio in almeno il 95% delle giornate simulate
   operatori_senza_sistema: 3  # pannello animato: operatori fissi senza previsione (il confronto del pitch è a parità di servizio)
+
+console:                        # l'operatore in console (server/diretta.py)
+  postazione: 3                 # la postazione di chi usa la console: le richieste che il motore le assegna aspettano lui
+  passa_a_collega_dopo_s: 60    # se non le prende entro questo tempo, le prende un collega (scelta)
+  fermo_assistenza_min: 10      # "assistenza in strada": il veicolo resta fermo finché arriva qualcuno (stima)
+  fermo_arresto_min: 15         # "arresto": il veicolo resta fermo, poi riparte dopo il controllo (stima)
+  cause:                        # cause tra cui l'operatore sceglie alla chiusura dell'intervento
+    - Pedoni in attraversamento
+    - Doppia fila o ostacolo
+    - Uscita scuola o folla
+    - Pioggia o visibilità
+    - GPS o sensori
+    - Altro
