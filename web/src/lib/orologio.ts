@@ -59,7 +59,7 @@ function ricevi(s: StatoServer) {
   inCorsa = s.in_corsa
   ritardi = s.ritardi
   richieste = s.richieste
-  temporali = s.temporali ?? ["previsto"]
+  temporali = s.temporali ?? ['previsto']
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
     temporale = s.temporale
