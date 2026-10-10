@@ -23,3 +23,6 @@ chiave*.json
 *.key
 *_key.json
 service_key*.json
+
+# Registro degli interventi salvato dal server (copia locale di quello su Supabase)
+server/registro_locale.jsonl

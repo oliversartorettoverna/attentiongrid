@@ -43,7 +43,9 @@ flowchart LR
 
 **9. Diretta** (`server/diretta.py`). Il server tiene l'orologio della giornata e lo stato delle richieste, come una piattaforma di teleguida: un veicolo che chiede aiuto si ferma finché l'intervento non è finito e poi riparte in ritardo sul suo piano. Manda lo stato a tutte le schermate con una WebSocket; avvio, pausa, velocità e salti nel tempo arrivano dalle schermate.
 
-**10. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
+**10. Registro** (`server/registro.py`). Ogni intervento chiuso dall'operatore, con la causa confermata, si salva subito in un file locale e poi su Supabase, riprovando se manca la rete. Il Registro dell'app lo mostra accanto a quelli del motore.
+
+**11. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
 
 ## Strumenti di verifica
 

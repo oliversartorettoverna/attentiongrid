@@ -182,9 +182,30 @@ Dal server all'app:
 - `temporale`: quale giornata vera si sta giocando, `previsto` o `prima` (il temporale arriva un'ora prima di quanto previsto la sera prima); `scenario` è la cartella dei suoi dati in `console/data/`, che l'app ricarica quando cambia; `temporali` le giornate disponibili.
 - `ritardi`: secondi persi da ogni veicolo, fermo ad aspettare o durante gli interventi. L'app legge posizione, livello e probabilità del veicolo all'ora `t − ritardo`.
 - `richieste`: quelle aperte. `inizio` è quando il veicolo ha chiamato (l'ora del piano `inizio_piano` più il ritardo accumulato fino a lì); `stato` è `in_attesa` finché un operatore non la prende, poi `in_gestione`; `assistenza` e `arresto` sono richieste chiuse dall'operatore in console con quell'azione, con il veicolo ancora fermo fino a `riparte` (secondo della giornata). Una richiesta passata a un collega la prende un operatore simulato da quel momento, con la durata del rigioco. `operatore` è il numero dell'operatore simulato (da 0) oppure `"tu"`; `assegnata` dice se il motore l'ha assegnata alla postazione della console: allora aspetta l'operatore fino a `passa_a_collega_dopo_s` (è il valore di `attesa_s`). `via` e `motivo_previsto` vengono dal registro del motore. Il veicolo resta fermo per `attesa_s + durata_s`, o finché l'operatore in console non chiude.
+- `registro`: `{"salvati": 4, "su_supabase": 4, "collegato": true, "errore": ""}`, lo stato del registro (sezione 7).
 - `cause`: le cause tra cui scegliere alla chiusura (`config/scenario.yaml`, `console.cause`). `chiusi`: gli ultimi 50 interventi chiusi dall'operatore in console nella giornata in corso, con azione e causa confermata.
 
 Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento"}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega).
 
 La cartella `console/data/scenario_temporale_prima/` ha gli stessi file di `scenario/` (tranne `edifici.geojson`, `piani.json`, `sensibilita.json`) e si fa con `python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_temporale_prima`: il piano dei turni e lo sfasamento delle partenze sono fatti su una previsione con il temporale un'ora più tardi, la giornata vera è quella del 3 ottobre 2024.
+
+## 7. Registro degli interventi confermati (`server/registro.py`, Supabase)
+
+Ogni intervento chiuso dall'operatore in console si scrive subito in `server/registro_locale.jsonl` (una riga JSON per intervento, fuori da git) e poi nella tabella `interventi` di Supabase; se la rete manca il server riprova ogni 5 secondi. `GET /api/interventi?giornata=previsto` restituisce quelli della giornata dal file locale.
+
+Tabella `interventi` (Supabase, progetto AttentionGrid; stessi campi nel file locale):
+
+| Campo | Significato |
+|---|---|
+| `codice` | Identificativo univoco generato dal server (un reinvio non crea doppioni) |
+| `giornata`, `data` | `previsto` o `prima`, e il giorno dello scenario |
+| `richiesta_id` | Posizione della richiesta in `rigioco.json` (e in `registro_interventi.csv`) |
+| `veicolo_id`, `flotta_id`, `via`, `seg_id` | Chi e dove; `flotta_id` rimanda alla tabella `flotte` |
+| `chiamata_s` | Secondo della giornata in cui il veicolo ha chiamato (ora del piano più il ritardo) |
+| `attesa_s`, `durata_s` | Quanto ha aspettato prima che l'operatore la prendesse, quanto è durato l'intervento |
+| `azione` | `riparte`, `deviato`, `assistenza`, `arresto` |
+| `causa`, `motivo_previsto` | La causa confermata dall'operatore e quella che il motore si aspettava |
+| `operatore`, `registrato_il` | Chi l'ha chiuso e quando è stato salvato |
+
+Tabella `flotte`: `id`, `nome`, `veicoli`. Accesso con la chiave pubblicabile: lettura di entrambe, aggiunta di interventi; niente modifiche né cancellazioni.
 

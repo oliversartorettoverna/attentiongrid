@@ -33,7 +33,7 @@ data/scripts  →  data/processed  →  sim  →  engine  →  console
 | `sim/` | Simula i giri di consegna dei veicoli sulle strade vere |
 | `engine/` | Previsione degli interventi, calcolo turni (Erlang C), sfasamento partenze, griglia dell'attenzione, rigioco dello scenario con e senza sistema |
 | `web/` | L'app: console operatore, planner turni, registro, dashboard flotta, configurazione |
-| `server/` | Server locale (FastAPI): dà all'app i dati dello scenario e, compilata, l'app stessa |
+| `server/` | Server locale (FastAPI): dati dello scenario, giornata in diretta, registro degli interventi (locale e Supabase), l'app compilata |
 | `console/` | Dati dello scenario per l'app (`console/data/`) e la vecchia console statica |
 | `tools/` | Verifica dei piani, analisi di sensibilità, taratura, dati di esempio della vecchia console |
 | `docs/` | Architettura, formati dei file, ipotesi e parametri |
@@ -80,6 +80,10 @@ python data/scripts/07_edifici_console.py     # edifici con altezza per la mappa
 python tools/sensibilita.py
 
 # 4. App (serve anche Node.js 20 o più recente)
+# per salvare gli interventi su Supabase: crea il file .env alla radice (fuori da git) con
+#   SUPABASE_URL=https://<progetto>.supabase.co
+#   SUPABASE_CHIAVE=<chiave pubblicabile, dalla dashboard di Supabase>
+# senza .env il registro resta solo in locale
 npm --prefix web install
 npm --prefix web run build
 .venv/bin/uvicorn server.main:app --port 8001
