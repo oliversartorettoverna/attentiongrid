@@ -90,8 +90,8 @@ tempo_reale:                # leve in tempo reale sopra il piano (tutte con prea
 
 attenzione:
   orizzonte_min: 3              # quanto avanti guarda il livello di ogni veicolo
-  soglia_osservazione: 0.25     # P(richiesta nei prossimi 3 min) sopra cui il veicolo diventa giallo
-  soglia_intervento: 0.45       # ... e rosso: un operatore viene assegnato prima che si fermi
+  soglia_osservazione: 0.15     # P(richiesta nei prossimi 3 min) sopra cui il veicolo diventa giallo (score sotto 85); scelta con tools/soglie.py
+  soglia_intervento: 0.35       # ... e rosso (score sotto 65): da guardare per primo, prima che si fermi
   anticipo_validazione_min: 2   # per misurare le soglie: stato del veicolo 2 minuti prima di ogni richiesta
 
 ottimizzazione:

@@ -62,6 +62,7 @@ export interface Scenario {
   perId: Map<string, Veicolo>
   inizio_s: number
   livelli: Record<string, string>
+  probabilita: Record<string, string> // due cifre per minuto in percento, "--" fermo
   dettagli: (string | number)[][][]
   soglie: { osservazione: number; intervento: number; orizzonte_min: number }
   validazione: {
@@ -126,6 +127,7 @@ export async function caricaScenario(): Promise<Scenario> {
     perId: new Map(veicoli.veicoli.map((v: Veicolo) => [v.veicolo_id, v])),
     inizio_s: sec(attenzione.inizio),
     livelli: attenzione.livelli,
+    probabilita: attenzione.p ?? {},
     dettagli: attenzione.dettagli,
     soglie: attenzione.soglie,
     validazione: attenzione.validazione,
@@ -161,6 +163,13 @@ export function livello(sc: Scenario, id: string, t: number): Livello {
   const s = sc.livelli[id]
   const c = s?.[Math.floor((t - sc.inizio_s) / 60)]
   return c === undefined || c === '-' ? -1 : (Number(c) as Livello)
+}
+
+/** Probabilità di una richiesta nei prossimi minuti per qualsiasi veicolo; null se è fermo o il dato manca. */
+export function probabilita(sc: Scenario, id: string, t: number): number | null {
+  const k = Math.floor((t - sc.inizio_s) / 60)
+  const c = sc.probabilita[id]?.slice(2 * k, 2 * k + 2)
+  return !c || c === '--' ? null : Number(c) / 100
 }
 
 /** I veicoli più a rischio in questo minuto, con via, motivo e quanto manca. */

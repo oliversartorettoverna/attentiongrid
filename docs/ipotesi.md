@@ -102,11 +102,13 @@ Stato: **tarato** = scelto perché il modello riproduca un dato pubblico; **dal 
 | Parametro | Valore | Stato | Da dove viene |
 |---|---|---|---|
 | Orizzonte | 3 minuti | scelta | Provati 2, 3 e 5 minuti sul primo scenario (12 BOXi, pomeriggio): separano allo stesso modo; 3 lascia all'operatore 2 minuti di anticipo |
-| Soglia giallo (attenzione) | P ≥ 0,25 di almeno una richiesta nei prossimi 3 minuti | scelta | Fissata sul primo scenario (circa la mediana del tempo in movimento) |
-| Soglia rosso (critico) | P ≥ 0,45 | scelta | Fissata sul primo scenario (circa l'80° percentile) |
-| Autonomy Confidence Score | 100 × (1 − P): le soglie diventano 75 e 55 | scelta | È lo stesso numero della griglia, letto al contrario per l'operatore |
+| Soglia giallo (attenzione) | P ≥ 0,15 di almeno una richiesta nei prossimi 3 minuti (score sotto 85) | scelta | `python tools/soglie.py` sulla giornata della centrale: il giallo fa da preavviso, così un veicolo verde chiama di rado |
+| Soglia rosso (critico) | P ≥ 0,35 (score sotto 65) | scelta | `tools/soglie.py`: il rosso resta al 15% del tempo |
+| Autonomy Confidence Score | 100 × (1 − P) | scelta | È lo stesso numero della griglia, letto al contrario per l'operatore |
 
-Nello scenario della centrale (150 veicoli, giornata intera) i veicoli in movimento sono verdi il 66% del tempo, gialli il 27%, rossi il 7%. Delle richieste, il 22% arriva da un veicolo che 2 minuti prima era rosso, il 39% da uno giallo e il 39% da uno verde; un rosso chiede aiuto 5,2 volte più spesso di un verde. Con la giornata intera le soglie fissate sul pomeriggio fanno diventare rosso un veicolo di rado.
+Con queste soglie, nello scenario della centrale (150 veicoli, giornata intera), i veicoli in movimento sono verdi il 38% del tempo, gialli il 47%, rossi il 15%. Delle richieste, il 36% arriva da un veicolo che 2 minuti prima era rosso, il 50% da uno giallo e il 14% da uno verde; un rosso chiede aiuto 6,5 volte più spesso di un verde. In media 9 veicoli sono rossi nello stesso momento, più degli operatori in turno (6,5 in media): il rosso dice quali veicoli guardare per primi, non assegna un operatore a ciascuno.
+
+Le alternative provate (`tools/soglie.py`): con 0,25 e 0,45 il rosso anticipa il 23% delle richieste e il giallo o rosso il 63%; con 0,20 e 0,35 il 37% e il 76%. Nessuna coppia anticipa quasi tutte le richieste con pochi veicoli colorati, perché il rischio è diffuso sulla città e le richieste sono in parte casuali.
 
 **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
 
@@ -124,7 +126,7 @@ Nello scenario della centrale (150 veicoli, giornata intera) i veicoli in movime
 
 Il risparmio resta tra **49% e 67%** in tutte le varianti: dipende dalla forma della curva (i picchi previsti), non dal valore preciso dei pesi. Quello che cambia molto è il numero di richieste, e quindi i veicoli per operatore con il sistema (da 6,2 a 14,3). Le richieste rimaste in attesa oltre 60 secondi con il sistema sono tra 0 e 12, tranne con il peso dei sottopassi a +50% (53, contro 847 senza sistema).
 
-**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Con tutti i pesi a metà nessuna richiesta arriva da un veicolo rosso; con tutti a +50% ne arriva il 47%. Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
+**Limite delle soglie della griglia:** sono valori fissi. Con le soglie precedenti (0,25 e 0,45), con tutti i pesi a metà nessuna richiesta arrivava da un veicolo rosso e con tutti a +50% ne arrivava il 47%: se i pesi veri sono diversi, le soglie vanno ritarate sul registro degli interventi della flotta.
 
 ## Il piano regge se il temporale non arriva quando previsto?
 
