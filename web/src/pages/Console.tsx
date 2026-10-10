@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Siren, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Satellite, Siren, Sparkles, X } from 'lucide-react'
 import { Mappa } from '../components/Mappa'
 import { LineaGiornata } from '../components/LineaGiornata'
 import { Stato, coloreLivello } from '../components/Stato'
@@ -15,6 +15,9 @@ import {
   posizione,
   score,
   sigla,
+  statoGps,
+  testoGps,
+  type StatoGps,
   type Livello,
   type Scenario,
 } from '../lib/scenario'
@@ -308,6 +311,7 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
         <Cifra etichetta={`Richiesta in ${sc.soglie.orizzonte_min} min`} valore={pv == null ? '—' : Math.round(pv * 100)} unita="%" />
       </div>
       <BarraScore valore={s ?? 100} sc={sc} />
+      <RigaGps gps={statoGps(sc, id, t)} />
 
       {d?.motivo && (
         <div className="mt-4 rounded-xl bg-elevated p-3">
@@ -376,6 +380,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
   const [consiglio, setConsiglio] = useState<Consiglio | 'attesa' | null>(null)
   const v = sc.perId.get(r.veicolo_id)
   const pv = probabilita(sc, r.veicolo_id, t)
+  const gps = statoGps(sc, r.veicolo_id, t)
   const suggerita = causaSuggerita(r.motivo_previsto, cause)
   const mia = r.operatore === 'tu'
   const inCorso = r.stato === 'in_gestione' && mia
@@ -386,7 +391,11 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
     fetch(`/api/copilota/${r.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score: pv == null ? null : score(pv), pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)] }),
+      body: JSON.stringify({
+        score: pv == null ? null : score(pv),
+        pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)],
+        gps: gps ? (gps.stato === 'ok' ? `buono, circa ${Math.round(gps.metri ?? 0)} m` : testoGps(gps)) : null,
+      }),
     })
       .then((x) => (x.ok ? x.json() : null))
       .then((c: Consiglio | null) => {
@@ -439,6 +448,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
           {r.motivo_previsto ? `Il motore se lo aspettava: ${r.motivo_previsto}` : 'Il motore non aveva un motivo prevalente'}
           {pv != null && ` · score ${score(pv)}`}
         </div>
+        <RigaGps gps={gps} />
       </div>
 
       {r.stato === 'in_attesa' && (
@@ -543,6 +553,18 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
         </div>
       )}
     </motion.section>
+  )
+}
+
+/** Lo stato del GPS adesso: neutro se buono, arancione se degradato, grigio se assente (sottopasso). */
+function RigaGps({ gps }: { gps: StatoGps | null }) {
+  if (!gps) return null
+  const colore = gps.stato === 'ok' ? 'var(--color-muted)' : gps.stato === 'assente' ? 'var(--color-offline)' : 'var(--color-warn)'
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: colore }}>
+      <Satellite className="size-3.5" />
+      {gps.stato === 'ok' ? `GPS buono · ±${Math.round(gps.metri ?? 0)} m` : `${testoGps(gps)} · modalità degradata`}
+    </div>
   )
 }
 

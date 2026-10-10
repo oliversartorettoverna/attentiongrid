@@ -21,6 +21,19 @@ export interface Dettaglio {
   via: string
   motivo: string
   tra_s: number
+  gps: StatoGps | null
+}
+
+/** Il GPS del veicolo adesso, dalla strada in cui si trova (precisione stimata dal motore). */
+export interface StatoGps {
+  metri: number | null // null: segnale assente (sottopasso)
+  stato: 'ok' | 'degradato' | 'assente'
+}
+
+export interface ParametriGps {
+  degradato_da_m: number
+  contributo_degradato: number
+  contributo_assente: number
 }
 
 export interface OraKpi {
@@ -56,10 +69,11 @@ export interface Scenario {
   veicoli: Veicolo[]
   perId: Map<string, Veicolo>
   inizio_s: number
-  livelli: Record<string, string>
   probabilita: Record<string, string> // due cifre per minuto in percento, "--" fermo
   dettagli: (string | number)[][][]
   soglie: { osservazione: number; intervento: number; orizzonte_min: number }
+  gps: ParametriGps | null
+  gpsTratto: Map<string, number | null> // precisione stimata per tratto in metri; null nei sottopassi
   validazione: {
     tempo_pct: Record<string, number>
     richieste_da_pct: Record<string, number>
@@ -125,10 +139,15 @@ export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
     veicoli: lista,
     perId: new Map(lista.map((v) => [v.veicolo_id, v])),
     inizio_s: sec(attenzione.inizio),
-    livelli: attenzione.livelli,
     probabilita: attenzione.p ?? {},
     dettagli: attenzione.dettagli,
     soglie: attenzione.soglie,
+    gps: attenzione.gps?.degradato_da_m ? attenzione.gps : null,
+    gpsTratto: new Map(
+      tratti.features
+        .filter((f: GeoJSON.Feature) => f.properties?.gps_m !== undefined)
+        .map((f: GeoJSON.Feature) => [f.properties!.seg_id, f.properties!.senza_gps ? null : f.properties!.gps_m]),
+    ),
     validazione: attenzione.validazione,
     fasce_s: rischio.fasce.map(sec),
     pioggia_mm: rischio.pioggia_mm,
@@ -159,17 +178,47 @@ export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number]
   return [a[1] + (b[1] - a[1]) * f, a[0] + (b[0] - a[0]) * f]
 }
 
-export function livello(sc: Scenario, id: string, t: number): Livello {
-  const s = sc.livelli[id]
-  const c = s?.[Math.floor((oraVeicolo(id, t) - sc.inizio_s) / 60)]
-  return c === undefined || c === '-' ? -1 : (Number(c) as Livello)
+/** Il GPS del veicolo adesso: la precisione stimata della strada che sta percorrendo, sul suo orologio. */
+export function statoGps(sc: Scenario, id: string, t: number): StatoGps | null {
+  const v = sc.perId.get(id)
+  if (!v || !sc.gps || !v.passate.length) return null
+  const rel = oraVeicolo(id, t) - v.t0 - v.sposta
+  const p = v.passate
+  let lo = 0
+  let hi = p.length / 2 - 1
+  if (rel < p[0]) return null
+  while (lo < hi) {
+    // ultimo tratto in cui il veicolo è entrato prima di adesso
+    const m = (lo + hi + 1) >> 1
+    if (p[2 * m] <= rel) lo = m
+    else hi = m - 1
+  }
+  const seg = `seg_${String(p[2 * lo + 1]).padStart(6, '0')}`
+  if (!sc.gpsTratto.has(seg)) return null
+  const metri = sc.gpsTratto.get(seg) ?? null
+  return { metri, stato: metri == null ? 'assente' : metri >= sc.gps.degradato_da_m ? 'degradato' : 'ok' }
 }
 
-/** Probabilità di una richiesta nei prossimi minuti per qualsiasi veicolo; null se è fermo o il dato manca. */
+export const testoGps = (g: StatoGps) => (g.stato === 'assente' ? 'GPS assente (sottopasso)' : `GPS debole · ${Math.round(g.metri ?? 0)} m`)
+
+/** Probabilità di una richiesta nei prossimi minuti: quella del motore, più il GPS degradato in questo momento
+ *  come una causa in più. null se il veicolo è fermo al deposito o il dato manca. */
 export function probabilita(sc: Scenario, id: string, t: number): number | null {
   const k = Math.floor((oraVeicolo(id, t) - sc.inizio_s) / 60)
   const c = sc.probabilita[id]?.slice(2 * k, 2 * k + 2)
-  return !c || c === '--' ? null : Number(c) / 100
+  if (!c || c === '--') return null
+  const p = Number(c) / 100
+  const g = statoGps(sc, id, t)
+  if (!g || g.stato === 'ok' || !sc.gps) return p
+  const extra = g.stato === 'assente' ? sc.gps.contributo_assente : sc.gps.contributo_degradato
+  return 1 - (1 - p) * (1 - extra)
+}
+
+/** Livello del veicolo dalle soglie del motore sulla probabilità (GPS compreso); -1 se è fermo al deposito. */
+export function livello(sc: Scenario, id: string, t: number): Livello {
+  const p = probabilita(sc, id, t)
+  if (p == null) return -1
+  return p >= sc.soglie.intervento ? 2 : p >= sc.soglie.osservazione ? 1 : 0
 }
 
 /** I veicoli più a rischio adesso, ognuno letto sul suo orologio. Via, motivo e tempo al tratto vengono dai
@@ -181,12 +230,16 @@ export function piuARischio(sc: Scenario, t: number): Dettaglio[] {
     if (p == null) continue
     const minuto = Math.floor((oraVeicolo(v.veicolo_id, t) - sc.inizio_s) / 60)
     const d = sc.dettagli[minuto]?.find((x) => x[0] === v.veicolo_id)
+    const gps = statoGps(sc, v.veicolo_id, t)
+    const gpsDebole = gps && gps.stato !== 'ok'
     out.push({
+      gps,
       id: v.veicolo_id,
       livello: livello(sc, v.veicolo_id, t),
       p,
       via: (d?.[3] as string) ?? '',
-      motivo: (d?.[4] as string) ?? '',
+      // il GPS degradato adesso viene prima del motivo previsto dal motore
+      motivo: [gpsDebole ? testoGps(gps) : '', (d?.[4] as string) ?? ''].filter(Boolean).join(' · '),
       tra_s: (d?.[5] as number) ?? -1,
     })
   }

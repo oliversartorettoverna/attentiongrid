@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap, MapLayerMouseEvent, MapMouseEvent } from 'maplibre-gl'
 import indirizzoWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { indiceFascia, livello, posizione, type Scenario } from '../lib/scenario'
+import { indiceFascia, livello, posizione, statoGps, type Scenario } from '../lib/scenario'
 import { orologio } from '../lib/orologio'
 
 // Soglie grafiche della mappa (millesimi di probabilità per passaggio): sotto i 60 la strada resta neutra.
@@ -58,6 +58,7 @@ const C = {
   warn: '#FF8A3D',
   critical: '#FF3D6E',
   info: '#7B6CFF',
+  offline: '#71717A',
 }
 
 interface Props {
@@ -192,6 +193,27 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
           'circle-pitch-alignment': 'map',
         },
       })
+      // metri per pixel a Roma (41,9° N): 28,45 a zoom 12, si dimezza a ogni livello di zoom
+      const raggioMetri: maplibregl.ExpressionSpecification = [
+        'interpolate', ['exponential', 2], ['zoom'],
+        12, ['/', ['get', 'g'], 28.45],
+        20, ['/', ['get', 'g'], 0.111],
+      ]
+      m.addLayer({
+        id: 'gps-incertezza',
+        type: 'circle',
+        source: 'veicoli',
+        filter: ['>', ['get', 'g'], 0],
+        paint: {
+          'circle-radius': raggioMetri,
+          'circle-color': ['case', ['==', ['get', 'ga'], 1], C.offline, C.warn],
+          'circle-opacity': 0.1,
+          'circle-stroke-color': ['case', ['==', ['get', 'ga'], 1], C.offline, C.warn],
+          'circle-stroke-width': 1,
+          'circle-stroke-opacity': 0.7,
+          'circle-pitch-alignment': 'map',
+        },
+      })
       m.addLayer({
         id: 'veicoli-selezione',
         type: 'circle',
@@ -243,9 +265,12 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
         for (const v of sc.veicoli) {
           const l = livello(sc, v.veicolo_id, t)
           if (l < 0) continue
+          // cerchio di incertezza: raggio pari all'errore del GPS in metri (40 m quando il segnale manca)
+          const gps = statoGps(sc, v.veicolo_id, t)
+          const g = !gps || gps.stato === 'ok' ? 0 : gps.stato === 'assente' ? 40 : (gps.metri ?? 0)
           features.push({
             type: 'Feature',
-            properties: { id: v.veicolo_id, l, s: v.veicolo_id === sel.current ? 1 : 0 },
+            properties: { id: v.veicolo_id, l, s: v.veicolo_id === sel.current ? 1 : 0, g, ga: gps?.stato === 'assente' ? 1 : 0 },
             geometry: { type: 'Point', coordinates: posizione(sc, v, t) },
           })
         }

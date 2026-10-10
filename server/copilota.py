@@ -30,6 +30,7 @@ Con i dati che ricevi scrivi, in italiano semplice e senza gergo:
   "assistenza" (serve qualcuno in strada), "arresto" (fermo per un controllo, solo se c'è un rischio serio);
 - perche_azione: una frase sul motivo dell'azione suggerita;
 - nota_registro: una frase neutra per il registro degli interventi, che resta all'autorità.
+Se il GPS è debole o assente il veicolo è in modalità degradata: dillo nella situazione.
 Usa solo i dati ricevuti: se un dato manca non inventarlo. Decide l'operatore: tu suggerisci."""
 
 SCHEMA = {
