@@ -165,7 +165,8 @@ def veicoli_attivi(giri: list, sposta: dict, inizio_s: int, n_min: int) -> np.nd
 
 
 def percorsi_animazione(giri: list, geometrie: dict) -> list:
-    """Posizione di ogni veicolo ogni PASSO_ANIMAZIONE_S secondi, senza spostamenti (la console li applica)."""
+    """Posizione di ogni veicolo ogni PASSO_ANIMAZIONE_S secondi e tratti percorsi, senza spostamenti:
+    l'app aggiunge `spostamenti_s` del veicolo, come fa il motore per livelli e richieste."""
     out = []
     for g in giri:
         punti_chiave = []                                   # (t, lat, lon)
@@ -190,9 +191,12 @@ def percorsi_animazione(giri: list, geometrie: dict) -> list:
         tempi = np.array([p[0] for p in punti_chiave])
         lat, lon = np.array([p[1] for p in punti_chiave]), np.array([p[2] for p in punti_chiave])
         campioni = np.arange(t0, tempi[-1] + PASSO_ANIMAZIONE_S, PASSO_ANIMAZIONE_S)
+        # i tratti percorsi, piatti: secondi dopo t0 e numero del tratto, alternati
+        passate = [x for p in g["percorso"] if not isinstance(p, dict) for x in (round(p[0] - t0), p[1])]
         out.append({"veicolo_id": g["veicolo_id"], "flotta": g["flotta"], "t0": t0,
                     "punti": [[round(a, 5), round(b, 5)] for a, b in
-                              zip(np.interp(campioni, tempi, lat), np.interp(campioni, tempi, lon))]})
+                              zip(np.interp(campioni, tempi, lat), np.interp(campioni, tempi, lon))],
+                    "passate": passate})
     return out
 
 

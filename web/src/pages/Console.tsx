@@ -9,6 +9,7 @@ import { useOra } from '../lib/orologio'
 import {
   livello,
   piuARischio,
+  probabilita,
   posizione,
   richiesteAperte,
   score,
@@ -178,7 +179,8 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
   const v = sc.perId.get(id)!
   const l = livello(sc, id, t)
   const d = piuARischio(sc, t).find((x) => x.id === id)
-  const s = d ? score(d.p) : null
+  const pv = d?.p ?? probabilita(sc, id, t)
+  const s = pv == null ? null : score(pv)
   const a = posizione(sc, v, t)
   const b = posizione(sc, v, t + sc.passo_s)
   const kmh = Math.round((Math.hypot((b[0] - a[0]) * 82_700, (b[1] - a[1]) * 111_200) / sc.passo_s) * 3.6)
@@ -205,11 +207,11 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-xl bg-line ring-1 ring-line">
-        <Cifra etichetta="Score" valore={s ?? '≥ 75'} colore={l >= 1 ? coloreLivello(l as Livello) : undefined} />
+        <Cifra etichetta="Score" valore={s ?? '—'} colore={l >= 1 ? coloreLivello(l as Livello) : undefined} />
         <Cifra etichetta="Velocità" valore={`${kmh}`} unita="km/h" />
-        <Cifra etichetta={`Richiesta in ${sc.soglie.orizzonte_min} min`} valore={d ? Math.round(d.p * 100) : '< 25'} unita="%" />
+        <Cifra etichetta={`Richiesta in ${sc.soglie.orizzonte_min} min`} valore={pv == null ? '—' : Math.round(pv * 100)} unita="%" />
       </div>
-      <BarraScore valore={s ?? 90} sc={sc} />
+      <BarraScore valore={s ?? 100} sc={sc} />
 
       {d && (
         <div className="mt-4 rounded-xl bg-elevated p-3">
@@ -240,7 +242,7 @@ function Cifra({ etichetta, valore, unita, colore }: { etichetta: string; valore
   return (
     <div className="bg-surface px-3 py-2.5">
       <div className="text-[10px] text-muted">{etichetta}</div>
-      <div className="num mt-0.5 text-base font-medium" style={{ color: colore }}>
+      <div className="num mt-0.5 text-[16px] font-medium text-primary" style={{ color: colore }}>
         {valore}
         {unita && <span className="ml-1 text-[11px] text-muted">{unita}</span>}
       </div>
@@ -266,9 +268,12 @@ function BarraScore({ valore, sc }: { valore: number; sc: Scenario }) {
           <span key={x} className="absolute -top-1 h-3.5 w-px bg-line-strong" style={{ left: `${x}%` }} />
         ))}
       </div>
-      <div className="num relative mt-1.5 h-3 text-[10px] text-muted">
-        <span className="absolute -translate-x-1/2" style={{ left: `${int}%` }}>{int} interviene</span>
-        <span className="absolute -translate-x-1/2" style={{ left: `${oss}%` }}>{oss} osserva</span>
+      <div className="mt-1.5 flex justify-between text-[10px] text-muted">
+        <span>0</span>
+        <span>
+          rosso sotto <span className="num">{int}</span> · giallo sotto <span className="num">{oss}</span>
+        </span>
+        <span className="num">100</span>
       </div>
     </div>
   )

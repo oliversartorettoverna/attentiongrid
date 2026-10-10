@@ -88,9 +88,12 @@ def serializza(stati: dict, inizio_s: int, cfg_att: dict, valid: dict) -> dict:
 
 
 def serializza_compatto(stati: dict, inizio_s: int, cfg_att: dict, valid: dict, quanti: int = 12) -> dict:
-    """Per molti veicoli: il livello di ogni veicolo minuto per minuto come stringa ("-" fermo, 0, 1, 2)
-    e, per ogni minuto, i dettagli dei `quanti` veicoli più a rischio."""
+    """Per molti veicoli: il livello e la probabilità di ogni veicolo minuto per minuto come stringhe
+    ("-" fermo, 0, 1, 2; due cifre in percento) e, per ogni minuto, i dettagli dei `quanti` veicoli più a rischio."""
     livelli = {v: "".join("-" if s[0] < 0 else str(s[0]) for s in lista) for v, lista in stati.items()}
+    # probabilità di ogni veicolo in percento, due cifre per minuto: lo score è 100 meno questo numero
+    prob = {v: "".join("--" if s[0] < 0 else f"{min(99, round(100 * s[1])):02d}" for s in lista)
+            for v, lista in stati.items()}
     n = max((len(x) for x in stati.values()), default=0)
     dettagli = []
     for i in range(n):
@@ -100,4 +103,4 @@ def serializza_compatto(stati: dict, inizio_s: int, cfg_att: dict, valid: dict, 
     return {"passo_s": 60, "inizio": hm(inizio_s),
             "soglie": {"osservazione": cfg_att["soglia_osservazione"], "intervento": cfg_att["soglia_intervento"],
                        "orizzonte_min": cfg_att["orizzonte_min"]},
-            "validazione": valid, "livelli": livelli, "dettagli": dettagli}
+            "validazione": valid, "livelli": livelli, "p": prob, "dettagli": dettagli}

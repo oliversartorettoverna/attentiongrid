@@ -128,20 +128,21 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 
 `sensibilita.json` (facoltativo, da `tools/sensibilita.py`): una riga per variante (`parametro`, `gruppo`, `fattore`, `richieste`, `risparmio_ore_pct`, `veicoli_per_operatore_senza`/`_con`, `fermi_oltre_60s_senza`/`_con`, `richieste_da_rosso_pct`) e `intervalli` con minimo e massimo di ogni numero su tutte le varianti.
 
-`attenzione.json`: la griglia dell'attenzione (scenario con sistema). `livelli` dà per ogni veicolo una stringa con un carattere per minuto a partire da `inizio`: `-` fermo al deposito, `0` verde (autonomo), `1` giallo (in osservazione), `2` rosso (intervento probabile). `dettagli` ha una voce per minuto con i 12 veicoli più a rischio, ognuno `[veicolo_id, livello, P, via, motivo, tra_s]`: `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti, `via` e `motivo` il tratto più rischioso davanti e il suo fattore principale, `tra_s` i secondi che mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
+`attenzione.json`: la griglia dell'attenzione (scenario con sistema). `livelli` dà per ogni veicolo una stringa con un carattere per minuto a partire da `inizio`: `-` fermo al deposito, `0` verde (autonomo), `1` giallo (in osservazione), `2` rosso (intervento probabile). `p` dà per ogni veicolo la probabilità minuto per minuto in percento, due cifre per minuto (`"07"` = 7%, `"99"` = 99% o più, `"--"` fermo): l'Autonomy Confidence Score è 100 meno questo numero. `dettagli` ha una voce per minuto con i 12 veicoli più a rischio, ognuno `[veicolo_id, livello, P, via, motivo, tra_s]`: `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti, `via` e `motivo` il tratto più rischioso davanti e il suo fattore principale, `tra_s` i secondi che mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
 ```json
 {"passo_s": 60, "inizio": "06:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},
  "validazione": {"tempo_pct": {"verde": 66, "giallo": 27, "rosso": 7}, "richieste_da_pct": {"verde": 39, "giallo": 39, "rosso": 22}, "rosso_su_verde": 5.2, "anticipo_s": 120},
  "livelli": {"boxi_01": "---0001121"},
+ "p": {"boxi_01": "------0712182631454951"},
  "dettagli": [[["boxi_33", 2, 0.742, "Corso Vittorio Emanuele Secondo", "attraversamenti pedonali + pioggia", 58]]]}
 ```
 
-`veicoli.json`: i percorsi per animare i veicoli (scenario con sistema, partenze già sfasate). `t0` è il secondo della giornata del primo punto; i punti `[lat, lon]` sono uno ogni `passo_s` secondi. `spostamenti_s` dice di quanto è stata spostata la partenza di ogni veicolo.
+`veicoli.json`: i percorsi per animare i veicoli, **senza** lo sfasamento delle partenze. `t0` è il secondo della giornata del primo punto; i punti `[lat, lon]` sono uno ogni `passo_s` secondi. `passate` elenca i tratti percorsi, piatti: secondi dopo `t0` e numero del tratto, alternati (`[0, 338, 22, 335]` = tratto 338 a `t0`, tratto 335 22 s dopo). `spostamenti_s` dice di quanto è stata spostata la partenza di ogni veicolo nello scenario con sistema: per allinearsi a livelli e richieste, ogni ora del veicolo va spostata di questo valore.
 ```json
 {"passo_s": 30,
  "flotte": {"boxi": {"nome": "Poste · BOXi", "veicoli": 50}},
  "spostamenti_s": {"boxi_01": 540},
- "veicoli": [{"veicolo_id": "boxi_01", "flotta": "boxi", "t0": 30660, "punti": [[41.90731, 12.46538]]}]}
+ "veicoli": [{"veicolo_id": "boxi_01", "flotta": "boxi", "t0": 30660, "punti": [[41.90731, 12.46538]], "passate": [21, 338, 43, 335]}]}
 ```
 
 `edifici.geojson` (da `data/scripts/07_edifici_console.py`): pianta semplificata degli edifici con l'altezza `h` in metri, per la mappa 3D. Altezza da OSM, poi da Copernicus, poi 15 m di riserva.

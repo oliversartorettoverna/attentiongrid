@@ -6,8 +6,10 @@ export type Livello = -1 | 0 | 1 | 2 // -1 fermo al deposito, 0 nominale, 1 atte
 export interface Veicolo {
   veicolo_id: string
   flotta: string
-  t0: number
+  t0: number // senza sfasamento: l'ora vera del veicolo è t0 + sposta
+  sposta: number // spostamento della partenza nello scenario con sistema (secondi)
   punti: [number, number][]
+  passate: number[] // secondi dopo t0 e numero del tratto, alternati
 }
 
 export interface Dettaglio {
@@ -62,6 +64,7 @@ export interface Scenario {
   perId: Map<string, Veicolo>
   inizio_s: number
   livelli: Record<string, string>
+  probabilita: Record<string, string> // due cifre per minuto in percento, "--" fermo
   dettagli: (string | number)[][][]
   soglie: { osservazione: number; intervento: number; orizzonte_min: number }
   validazione: {
@@ -115,6 +118,11 @@ export async function caricaScenario(): Promise<Scenario> {
     ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'rigioco.json', 'kpi.json',
       'tratti.geojson', 'edifici.geojson'].map(leggi),
   )
+  const lista: Veicolo[] = veicoli.veicoli.map((v: Veicolo) => ({
+    ...v,
+    sposta: veicoli.spostamenti_s?.[v.veicolo_id] ?? 0,
+    passate: v.passate ?? [],
+  }))
   const piani = await leggi('piani.json').catch(() => null)
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
@@ -122,10 +130,11 @@ export async function caricaScenario(): Promise<Scenario> {
     data: rischio.data,
     flotte: veicoli.flotte,
     passo_s: veicoli.passo_s,
-    veicoli: veicoli.veicoli,
-    perId: new Map(veicoli.veicoli.map((v: Veicolo) => [v.veicolo_id, v])),
+    veicoli: lista,
+    perId: new Map(lista.map((v) => [v.veicolo_id, v])),
     inizio_s: sec(attenzione.inizio),
     livelli: attenzione.livelli,
+    probabilita: attenzione.p ?? {},
     dettagli: attenzione.dettagli,
     soglie: attenzione.soglie,
     validazione: attenzione.validazione,
@@ -146,7 +155,7 @@ export async function caricaScenario(): Promise<Scenario> {
 
 /** Posizione [lon, lat] del veicolo al secondo t, interpolata tra due campioni. */
 export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number] {
-  const x = (t - v.t0) / sc.passo_s
+  const x = (t - v.t0 - v.sposta) / sc.passo_s
   const n = v.punti.length - 1
   if (x <= 0) return [v.punti[0][1], v.punti[0][0]]
   if (x >= n) return [v.punti[n][1], v.punti[n][0]]
@@ -161,6 +170,13 @@ export function livello(sc: Scenario, id: string, t: number): Livello {
   const s = sc.livelli[id]
   const c = s?.[Math.floor((t - sc.inizio_s) / 60)]
   return c === undefined || c === '-' ? -1 : (Number(c) as Livello)
+}
+
+/** Probabilità di una richiesta nei prossimi minuti per qualsiasi veicolo; null se è fermo o il dato manca. */
+export function probabilita(sc: Scenario, id: string, t: number): number | null {
+  const k = Math.floor((t - sc.inizio_s) / 60)
+  const c = sc.probabilita[id]?.slice(2 * k, 2 * k + 2)
+  return !c || c === '--' ? null : Number(c) / 100
 }
 
 /** I veicoli più a rischio in questo minuto, con via, motivo e quanto manca. */
