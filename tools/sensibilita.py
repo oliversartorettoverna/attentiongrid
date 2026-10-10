@@ -75,6 +75,8 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         shutil.copy(PROCESSED / "meteo.csv", tmp / "meteo.csv")
+        # con tratti e pesi accanto al rischio il motore rifà il piano prudente vero (temporale ±1 ora)
+        shutil.copy(PROCESSED / "tratti.geojson", tmp / "tratti.geojson")
         for nome, gruppo, k, su_pesi, su_scenario in varianti():
             p, s = copy.deepcopy(pesi), copy.deepcopy(sc)
             for chiave, f in su_pesi.items():
@@ -83,9 +85,10 @@ def main():
                 scala(s, chiave, f)
             mappa_rischio.calcola(tratti, meteo, s, p).to_csv(tmp / "rischio.csv", index=False)
             yaml.safe_dump(s, open(tmp / "scenario.yaml", "w", encoding="utf-8"), allow_unicode=True)
+            yaml.safe_dump(p, open(tmp / "pesi_rischio.yaml", "w", encoding="utf-8"), allow_unicode=True)
             with contextlib.redirect_stdout(io.StringIO()):
                 r = esegui(RADICE / "sim/out/giri.json", tmp / "rischio.csv", PROCESSED / "tratti.geojson",
-                           tmp / "out", tmp / "scenario.yaml", {"boxi"})
+                           tmp / "out", tmp / "scenario.yaml")
             ps, pc = r["parita_servizio"]["senza"], r["parita_servizio"]["con"]
             riga = {
                 "parametro": nome, "gruppo": gruppo, "fattore": k,

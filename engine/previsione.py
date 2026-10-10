@@ -5,6 +5,7 @@ generi una richiesta di aiuto è il `p_intervento` del tratto nella fascia orari
 Sommando per minuto si ottiene quante richieste ci aspettiamo.
 """
 import csv
+import gzip
 import json
 from dataclasses import dataclass
 
@@ -50,9 +51,10 @@ def carica_giri(percorso: str) -> list:
 
 
 def carica_rischio(percorso: str) -> dict:
-    """{(seg_id, fascia): riga}, con i numeri già convertiti."""
+    """{(seg_id, fascia): riga}, con i numeri già convertiti. Legge anche il file compresso (.gz)."""
     rischio = {}
-    with open(percorso, encoding="utf-8") as f:
+    apri = gzip.open if str(percorso).endswith(".gz") else open
+    with apri(percorso, "rt", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             chiave = (r.pop("seg_id"), r.pop("fascia"))
             rischio[chiave] = {k: float(v) for k, v in r.items()}
@@ -65,6 +67,16 @@ def carica_nomi_vie(percorso_tratti: str) -> dict:
     return {ft["properties"]["seg_id"]: ft["properties"].get("nome", "") for ft in gj["features"]}
 
 
+def voci_percorso(g: dict):
+    """(secondi, seg_id) per ogni voce del percorso. Formato compatto [t, numero_tratto, verso, durata]
+    (simulatore della centrale) oppure quello a punti {"ora", "seg_id", ...} (dati di esempio)."""
+    for p in g["percorso"]:
+        if isinstance(p, dict):
+            yield sec(p["ora"]), p["seg_id"]
+        else:
+            yield p[0], (f"seg_{p[1]:06d}" if p[1] >= 0 else "")
+
+
 def passate(giri: list, spostamenti_min: dict | None = None, flotte: set | None = None) -> list:
     """Tutte le passate, applicando a ogni veicolo lo spostamento di partenza (in minuti)."""
     spostamenti_min = spostamenti_min or {}
@@ -74,11 +86,11 @@ def passate(giri: list, spostamenti_min: dict | None = None, flotte: set | None 
             continue
         delta = spostamenti_min.get(g["veicolo_id"], 0) * 60
         precedente, indice = None, 0
-        for punto in g["percorso"]:
-            if punto["seg_id"] != precedente:
-                risultato.append(Passata(g["veicolo_id"], g["flotta"], indice, sec(punto["ora"]) + delta, punto["seg_id"]))
+        for t, seg in voci_percorso(g):
+            if seg != precedente:
+                risultato.append(Passata(g["veicolo_id"], g["flotta"], indice, t + delta, seg))
                 indice += 1
-                precedente = punto["seg_id"]
+                precedente = seg
     return risultato
 
 
@@ -93,14 +105,28 @@ def prob(p: Passata, rischio: dict, fascia_min: int) -> float:
     return r["p_intervento"] if r else 0.0
 
 
-def curva_richieste(lista_passate: list, rischio: dict, inizio_s: int, fine_s: int, fascia_min: int) -> list:
+def prob_asciutto(p: Passata, rischio: dict, fascia_min: int, base: float = 0.002) -> float:
+    """La stessa probabilità in una giornata senza pioggia forte: senza l'effetto della pioggia
+    e senza sottopassi allagati. Serve a chi organizza i turni senza previsione meteo."""
+    r = riga_rischio(p, rischio, fascia_min)
+    if not r:
+        return 0.0
+    resto = 1 - base
+    for k in ("c_attraversamenti", "c_doppia_fila", "c_scuola", "c_abbagliamento", "c_gps"):
+        resto *= 1 - r.get(k, 0.0)
+    return min(r["p_intervento"], 1 - resto)
+
+
+def curva_richieste(lista_passate: list, rischio: dict, inizio_s: int, fine_s: int, fascia_min: int,
+                    probabilita=None) -> list:
     """Richieste attese per ogni minuto tra inizio e fine."""
+    probabilita = probabilita or prob
     n = (fine_s - inizio_s) // 60
     curva = [0.0] * n
     for p in lista_passate:
         i = (p.t - inizio_s) // 60
         if 0 <= i < n:
-            curva[i] += prob(p, rischio, fascia_min)
+            curva[i] += probabilita(p, rischio, fascia_min)
     return curva
 
 

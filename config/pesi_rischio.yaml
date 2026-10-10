@@ -19,7 +19,7 @@ doppia_fila:
 scuola:
   contributo: 0.03
   distanza_m: 100
-  fasce: [["12:30", "14:00"], ["16:00", "17:00"]]
+  fasce: [["07:45", "08:30"], ["12:30", "14:00"], ["16:00", "17:00"]]   # entrata e uscite
 
 pioggia:
   soglia_mm_ora: 4.0

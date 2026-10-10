@@ -1,4 +1,4 @@
-"""Calcola data/processed/rischio.csv: probabilità di intervento per tratto e fascia di 5 minuti.
+"""Calcola data/processed/rischio.csv.gz: probabilità di intervento per tratto e fascia di 5 minuti.
 
 Uso:
     python data/scripts/04_mappa_rischio.py
@@ -88,7 +88,9 @@ def calcola(tratti, meteo, sc: dict, pesi: dict) -> pd.DataFrame:
             resto = 1 - pesi["base"]
             for c in contributi:
                 resto *= (1 - min(c, 0.95))
-            righe.append([t.seg_id, hhmm(fm), round(1 - resto, 4)] + [round(c, 4) for c in contributi])
+            # 4 decimali per la probabilità, 3 per i contributi (servono solo a spiegare il motivo):
+            # così la giornata intera resta sotto i 20 MB
+            righe.append([t.seg_id, hhmm(fm), round(1 - resto, 4)] + [round(c, 3) or 0 for c in contributi])
 
     colonne = ["seg_id", "fascia", "p_intervento", "c_attraversamenti", "c_doppia_fila", "c_scuola",
                "c_meteo", "c_abbagliamento", "c_sottopasso", "c_gps"]
@@ -98,8 +100,9 @@ def calcola(tratti, meteo, sc: dict, pesi: dict) -> pd.DataFrame:
 def main():
     tratti = carica_tratti()
     df = calcola(tratti, pd.read_csv(PROCESSED / "meteo.csv"), leggi_scenario(), leggi_pesi())
-    df.to_csv(PROCESSED / "rischio.csv", index=False)
-    print(f"Scritte {len(df)} righe in {PROCESSED / 'rischio.csv'}")
+    # compresso: la giornata intera sono ~380.000 righe (circa 20 MB in chiaro, 3 MB compresso)
+    df.to_csv(PROCESSED / "rischio.csv.gz", index=False, compression="gzip")
+    print(f"Scritte {len(df)} righe in {PROCESSED / 'rischio.csv.gz'}")
     print("Tratti più rischiosi alle 16:30:")
     top = df[df["fascia"] == "16:30"].nlargest(10, "p_intervento").merge(tratti[["seg_id", "nome"]], on="seg_id")
     print(top[["nome", "p_intervento"]].to_string(index=False))

@@ -7,7 +7,7 @@ flowchart LR
   A[OSM: strade, edifici,<br/>scuole, negozi] --> T[tratti.geojson]
   B[EUBUCCO / OSM:<br/>altezza edifici] --> T
   M[Open-Meteo:<br/>meteo orario] --> R
-  T --> R[rischio.csv<br/>per tratto e fascia]
+  T --> R[rischio.csv.gz<br/>per tratto e fascia]
   T --> S[sim: giri.json]
   R --> P[engine: previsione<br/>richieste per minuto]
   S --> P

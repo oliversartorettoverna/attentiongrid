@@ -1,0 +1,9 @@
+# Parametri economici: gli stessi del foglio "Modello – costi, prezzo e mercato" nel Drive (scheda Ipotesi e Servizio completo).
+# Se cambiano lì, vanno cambiati qui. Stato di ogni numero: docs/ipotesi.md.
+
+paese: "Germania"
+stipendio_lordo_annuo: 45000      # gehalt.de: Leitstellendisponent circa 3.710 €/mese; StepStone circa 42.300 €/anno
+costo_azienda_su_lordo: 1.21      # contributi a carico dell'azienda
+persone_per_postazione_24h: 5     # Call Centre Helper: tra 4,2 e 5,4 per coprire una postazione 24 ore su 24
+costi_extra: 0.15                 # capiturno, formazione, sala
+prezzo_servizio_mese: 2500        # canone per veicolo al mese, Germania (da validare)
