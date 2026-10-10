@@ -8,13 +8,66 @@ Stato: **validato** = da fonte o misura; **da validare** = stima nostra, da conf
 
 | Parametro | Valore | Stato | Da dove viene / come validarlo |
 |---|---|---|---|
-| Velocità massima BOXi | 25 km/h | validato | Scheda BOXi (Poste, feb. 2026) |
-| Durata media di un intervento remoto | 90 s | prudente | Cruise implica meno di un minuto (vedi sotto); da confermare nelle interviste |
+| Durata media di un intervento remoto | 35 s | da validare | Ricavata da Cruise: una sessione ogni 4–5 miglia, assistenza per il 2–4% del tempo, 14 mph di media a San Francisco (vedi sotto); da confermare nelle interviste |
 | Tempo massimo di attesa accettabile | 20 s | da validare | Cruise: 98% delle richieste gestite entro 3 s (robotaxi). Per un veicolo lento che si ferma in sicurezza assumiamo 20 s |
 | Livello di servizio | 90% delle richieste entro il tempo massimo | scelta | Standard dei call center |
 | Persone per coprire una postazione 24/7 | circa 5 (da 4,2 a 5,4) | validato | Regola dei call center (Call Centre Helper) |
 | Veicoli per operatore, oggi | 1:1 per Poste | validato | Scheda della sfida Poste |
 | Limite umano nella supervisione | 4–6 robot per operatore | validato (laboratorio) | Crandall & Cummings 2007 |
+| Turni fissi di una centrale senza previsione | 06–14, 14–22, 22–24 | scelta | Turni da 8 ore di una sala operativa; l'ultimo copre solo fino a fine servizio |
+| Cambio di personale con il piano | al massimo una volta l'ora | scelta | Più spesso non è realistico organizzare i turni |
+| Verifica del piano | 20 giornate simulate dalla previsione; ogni ora deve rispettare il servizio in almeno il 95% | scelta | Il piano non vede mai la giornata del rigioco |
+| Spostamento massimo delle partenze | ±10 minuti | da validare | Margine che un cliente accetta sulle consegne; da chiedere a Poste |
+| Operatori fissi nel pannello animato "senza" | 3 | scelta | Serve solo all'animazione; il confronto del pitch è a parità di servizio |
+
+## Traffico
+
+| Parametro | Valore | Stato | Fonte |
+|---|---|---|---|
+| Velocità media nelle ore di punta (07–10, 17–20) | 16,7 km/h | validato | TomTom Traffic Index, Roma |
+| Velocità media di giorno | 19,5 km/h | validato | TomTom Traffic Index, Roma (10 km in 30 min 46 s, media dell'anno) |
+| Velocità dalle 21 | 30 km/h, poi il massimo di ogni veicolo | stima | Traffico libero la sera |
+
+Ogni veicolo va alla velocità del traffico, fino al suo massimo.
+
+## Flotte della centrale condivisa
+
+| Flotta | Veicoli | Velocità massima | Giri | Stato |
+|---|---|---|---|---|
+| Poste · BOXi | 50 | 25 km/h (**validato**, scheda BOXi) | 3 ondate (08:30, 12:00, 16:00) da 8 fermate, 90 s per fermata; partono dall'ufficio postale Roma 5 in Prati | numero di veicoli **scelta**; 3 giri per restare sotto i 60 km di autonomia (**validato**, scheda BOXi); sosta **stima** |
+| Corriere A · furgoni | 40 | 50 km/h (limite urbano) | 3 ondate (08:00, 12:30, 16:30) da 12 fermate, 150 s per fermata; deposito a Porta Portese | **scelta** (corriere ipotetico) |
+| Corriere B · furgoni | 30 | 50 km/h | 3 ondate (09:00, 13:30, 17:00) da 12 fermate, 150 s; deposito in Borgo | **scelta** (corriere ipotetico) |
+| Navette di linea | 30 | 25 km/h | 3 linee avanti e indietro, fermata ogni 400 m, 20 s per fermata, servizio 06:30–23:30; orario fisso, partenze non spostabili | **scelta** |
+
+Le ondate mettono in strada molti mezzi insieme: è questo che crea i picchi che il sistema prevede e sfasa.
+
+## Leve in tempo reale
+
+Sopra il piano dei turni la centrale usa quattro leve, con i preavvisi che ha davvero (`engine/tempo_reale.py`, parametri in `config/scenario.yaml`, sezione `tempo_reale`).
+
+| Leva | Parametri | Stato |
+|---|---|---|
+| Previsione a breve | carico atteso nei prossimi 15 minuti; meteo e radar noti 2 ore prima | **stima** |
+| 1. Operatori misti | un quarto di chi è in turno fa back-office e passa alla supervisione in 1 minuto | **stima** |
+| 2. Prolungamento del turno | fino a 1 ora in più, deciso con 30 minuti di preavviso, straordinario +25% | **stima** |
+| 3. Reperibilità | 2 persone per turno, operative 45 minuti dopo la chiamata, per almeno 2 ore; indennità pari al 15% del costo orario | **stima** |
+| 4. Meno richieste | partenze ritardate al massimo di 10 minuti, soste prima delle vie a rischio al massimo di 10 minuti a veicolo (vie a rischio = 5% dei tratti più rischiosi della fascia) | **da validare** con Poste |
+
+## Costi
+
+Gli stessi del foglio "Modello – costi, prezzo e mercato" nel Drive; valori in `config/economia.yaml`.
+
+| Parametro | Valore | Stato | Fonte |
+|---|---|---|---|
+| Paese di riferimento | Germania | scelta | Come nel foglio del modello di business nel Drive |
+| Stipendio lordo annuo di un operatore | 45.000 € | validato | gehalt.de (Leitstellendisponent, circa 3.710 €/mese); StepStone circa 42.300 €/anno |
+| Costo azienda sul lordo | ×1,21 | stima | Contributi a carico del datore di lavoro |
+| Persone per una postazione 24 ore su 24 | 5 | validato | Call Centre Helper (4,2–5,4) |
+| Costi extra | +15% | stima | Capiturno, formazione, sala |
+| Costo di un'ora di postazione | 35,74 € | calcolato | 45.000 × 1,21 × 5 × 1,15 / 8.760 ore |
+| Canone per veicolo al mese | 2.500 € | da validare | Prezzo del servizio completo, Germania |
+
+Il costo per veicolo al mese di ogni piano è ore operatore × 35,74 € × 365 / 12, diviso per i 150 veicoli. Per un cliente italiano come Poste va rifatto con lo stipendio italiano.
 
 ## Rischio di intervento
 
@@ -33,7 +86,7 @@ Stato: **tarato** = scelto perché il modello riproduca un dato pubblico; **dal 
 | Attraversamenti | per ogni striscia o semaforo pedonale sul tratto, moltiplicato per i pedoni stimati | 0,0048 per attraversamento in una via tipica | **tarato**: con questo valore, nel pomeriggio senza pioggia forte né scuole, i BOXi chiedono aiuto una volta ogni 7,2 km, come Cruise a San Francisco (una ogni 4–5 miglia, [CNBC 2023](https://www.cnbc.com/2023/11/06/cruise-confirms-robotaxis-rely-on-human-assistance-every-4-to-5-miles.html)). `python tools/taratura.py` |
 | Pedoni | moltiplicano il rischio degli attraversamenti | pedoni in 5 min ≈ 25 + 1,51 × negozi/100 m, diviso 32,6 (via tipica); oltre 31 negozi/100 m non si estrapola | **dal rilievo**: 7 vie, correlazione pedoni–negozi +0,82 |
 | Doppia fila | distanza tra le facciate ≥ 20 m e fascia 08–10 o 16–19:30 | 0,02 | soglia **dal rilievo**: auto in doppia fila correlate con la larghezza della via (+0,86), non con i negozi (−0,71); vie larghe 9 auto in media, strette 3. Il contributo resta una **stima** |
-| Scuola | scuola entro 100 m (OSM + anagrafe del Ministero) e fascia 12:30–14:00 o 16:00–17:00 | 0,03 | **stima**; l'elenco delle scuole viene dal Ministero perché OSM mancava 3 scuole su 4 viste nel rilievo |
+| Scuola | scuola entro 100 m (OSM + anagrafe del Ministero) e fascia 07:45–08:30, 12:30–14:00 o 16:00–17:00 (entrata e uscite) | 0,03 | **stima**; l'elenco delle scuole viene dal Ministero perché OSM mancava 3 scuole su 4 viste nel rilievo |
 | Pioggia forte | pioggia > 4 mm/h | moltiplica per 1,7 i tre fattori sopra | **da letteratura**: con la pioggia gli incidenti aumentano in media del 71% (meta-analisi di 34 studi, [Qiu e Nixon 2008](https://journals.sagepub.com/doi/10.3141/2055-16)). È un dato sui guidatori umani, usato come approssimazione |
 | Base | sempre | 0,002 | **stima**: blocchi non spiegati dagli altri fattori; impatto trascurabile (sensibilità) |
 | Sottopasso | sottovia stradale (OSM `tunnel=yes` su strade principali) e pioggia > 4 mm/h | 0,2 | **stima** (Waymo sospende il servizio per allagamenti, mag. 2026); impatto trascurabile sul risultato |
@@ -42,33 +95,48 @@ Stato: **tarato** = scelto perché il modello riproduca un dato pubblico; **dal 
 
 **Rilievo in strada (`data/rilievo/rilievo_prati_trastevere.csv`).** 8 vie, 2 e 5 ottobre 2026, 16:00–17:30: auto in doppia fila lungo il tratto, pedoni che attraversano in 5 minuti, scuole e uscita in corso. Limiti: una misura per via e nessuna misura fuori dall'orario di uscita, quindi l'effetto della scuola non si può separare da quello della via. Via Ottaviano e Via della Lungaretta sono pedonali e servono solo per la regola dei pedoni.
 
-**Durata degli interventi.** Cruise dichiara assistenza remota per il 2–4% del tempo, con una richiesta ogni 4–5 miglia: ne deriva una durata media sotto il minuto. I nostri 90 s sono quindi prudenti.
+**Durata degli interventi.** Cruise dichiara assistenza remota per il 2–4% del tempo, con una richiesta ogni 4–5 miglia. A 14 mph di media 4,5 miglia sono circa 19 minuti di guida, e il 3% di 19 minuti fa circa 35 s: è il valore che usiamo. La sensibilità prova anche 17 s e 52 s (±50%).
 
 ## Soglie della griglia dell'attenzione
 
 | Parametro | Valore | Stato | Da dove viene |
 |---|---|---|---|
-| Orizzonte | 3 minuti | scelta | Provati 2, 3 e 5 minuti: separano allo stesso modo (rosso circa 6 volte più richieste del verde); 3 lascia all'operatore 2 minuti di anticipo |
-| Soglia giallo | P ≥ 0,25 di almeno una richiesta nei prossimi 3 minuti | scelta | Circa la mediana del tempo in movimento nello scenario del 3/10/2024 |
-| Soglia rosso | P ≥ 0,45 | scelta | Circa l'80° percentile: il rosso copre un quinto del tempo |
+| Orizzonte | 3 minuti | scelta | Provati 2, 3 e 5 minuti sul primo scenario (12 BOXi, pomeriggio): separano allo stesso modo; 3 lascia all'operatore 2 minuti di anticipo |
+| Soglia giallo (attenzione) | P ≥ 0,25 di almeno una richiesta nei prossimi 3 minuti | scelta | Fissata sul primo scenario (circa la mediana del tempo in movimento) |
+| Soglia rosso (critico) | P ≥ 0,45 | scelta | Fissata sul primo scenario (circa l'80° percentile) |
+| Autonomy Confidence Score | 100 × (1 − P): le soglie diventano 75 e 55 | scelta | È lo stesso numero della griglia, letto al contrario per l'operatore |
 
-Nello scenario: i veicoli sono verdi il 48% del tempo in movimento, gialli il 29%, rossi il 22%; il 54% delle richieste arriva da un veicolo che 2 minuti prima era rosso, il 17% da uno verde (un rosso chiede aiuto 6,7 volte più spesso di un verde). **Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
+Nello scenario della centrale (150 veicoli, giornata intera) i veicoli in movimento sono verdi il 66% del tempo, gialli il 27%, rossi il 7%. Delle richieste, il 22% arriva da un veicolo che 2 minuti prima era rosso, il 39% da uno giallo e il 39% da uno verde; un rosso chiede aiuto 5,2 volte più spesso di un verde. Con la giornata intera le soglie fissate sul pomeriggio fanno diventare rosso un veicolo di rado.
+
+**Limite:** la verifica è fatta sulla simulazione, dove le richieste sono estratte dalle stesse probabilità; la verifica vera richiede il registro degli interventi di una flotta reale.
 
 ## Sensibilità: il risultato regge se i pesi sono sbagliati?
 
-`python tools/sensibilita.py` rifà rischio e motore cambiando un parametro alla volta (−50% e +50%) e poi tutti i pesi insieme. Risultati sullo scenario del 3 ottobre 2024 (21 corse):
+`python tools/sensibilita.py` rifà rischio, piano prudente e rigioco cambiando un parametro alla volta (−50% e +50%) e poi tutti i pesi insieme. Risultati sulla centrale a 150 veicoli, giovedì 3 ottobre 2024 (21 corse):
 
-| Cosa cambia | Risparmio di ore operatore a parità di servizio |
-|---|---|
-| Riferimento | 51% |
-| Ogni peso del rischio a −50% o +50%, uno alla volta | 49–58% |
-| Tutti i pesi insieme a −50% / +50% | 50% / 59% |
-| Durata media dell'intervento 45 s / 135 s | 50% / 57% |
-| Attesa massima 10 s / 30 s | 55% / 53% |
+| Cosa cambia | Risparmio di ore operatore a parità di servizio | Richieste nella giornata |
+|---|---|---|
+| Riferimento | 59% | 5.287 |
+| Ogni peso del rischio a −50% o +50%, uno alla volta | 56–65% | 3.871–6.644 |
+| Tutti i pesi insieme a −50% / +50% | 49% / 67% | 2.478 / 8.422 |
+| Durata media dell'intervento 17 s / 52 s | 59% / 62% | 5.287 |
+| Attesa massima 10 s / 30 s | 58% / 61% | 5.287 |
 
-Il risparmio resta tra **49% e 59%** in tutte le varianti: dipende dalla forma della curva (il picco previsto), non dal valore preciso dei pesi. Quello che cambia molto è il numero assoluto di richieste (133–501) e quindi i veicoli per operatore (2,2–4,8 con il sistema).
+Il risparmio resta tra **49% e 67%** in tutte le varianti: dipende dalla forma della curva (i picchi previsti), non dal valore preciso dei pesi. Quello che cambia molto è il numero di richieste, e quindi i veicoli per operatore con il sistema (da 6,2 a 14,3). Le richieste rimaste in attesa oltre 60 secondi con il sistema sono tra 0 e 12, tranne con il peso dei sottopassi a +50% (53, contro 847 senza sistema).
 
-**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Se i pesi veri fossero la metà, quasi nessun veicolo diventerebbe rosso (solo il 7% delle richieste arriverebbe da un rosso). Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
+**Limite delle soglie della griglia:** sono valori fissi (0,25 e 0,45). Con tutti i pesi a metà nessuna richiesta arriva da un veicolo rosso; con tutti a +50% ne arriva il 47%. Con una flotta vera le soglie vanno ritarate sul registro degli interventi.
+
+## Il piano regge se il temporale non arriva quando previsto?
+
+`python tools/prova_pianificazione.py` fa i piani sulla previsione e li verifica sulla giornata vera, anche con il temporale previsto un'ora prima o un'ora dopo di quando arriva (risultati in `console/data/scenario/piani.json`).
+
+| Il temporale arriva | Turni fissi sul picco del turno | Piano normale | Piano prudente |
+|---|---|---|---|
+| Come previsto | 222 ore, 97% entro 20 s nell'ora peggiore | 113 ore, 94% | 117 ore, 94% |
+| Un'ora prima del previsto | 198 ore, 73% | 110 ore, 34% | 116 ore, 94% |
+| Un'ora dopo il previsto | 222 ore, 97% | 110 ore, 3% | 117 ore, 94% |
+
+Il piano prudente rifà il piano con il temporale anticipato e ritardato di un'ora (ricalcolando il rischio, perché la pioggia sull'uscita da scuola pesa più della somma delle due) e tiene il massimo: costa 4 ore in più del piano normale e regge in tutti e tre i casi.
 
 ## Scenario della demo
 
@@ -76,9 +144,20 @@ Il risparmio resta tra **49% e 59%** in tutte le varianti: dipende dalla forma d
 |---|---|---|
 | Area | Prati e Trastevere (riquadro in `config/scenario.yaml`) | scelta |
 | Giorno | giovedì 3 ottobre 2024, giorno di scuola. Pioggia (Open-Meteo, Ponte Garibaldi): 5,0 mm alle 16, 4,2 alle 17, 3,7 alle 18. Nell'autunno 2025 nessun giorno feriale superava 4 mm/h alle 16 e alle 17 | scelta |
-| Finestra | 14:00–19:00, picco atteso 16:30 | scelta |
-| Flotte | 12 BOXi, 4 navette su anello fisso, 6 robot da marciapiede (solo nel finale) | scelta |
-| Deposito BOXi | ufficio postale OSM più vicino al centro di Prati (esclusi gli uffici di Poste Vaticane) | scelta |
+| Finestra | 06:00–24:00, la giornata intera della centrale; picco del rischio 16:00–17:30 | scelta |
+| Flotte | 150 veicoli di 4 gestori: 50 BOXi, 40 + 30 furgoni di due corrieri, 30 navette di linea (vedi "Flotte della centrale condivisa") | scelta |
+| Deposito BOXi | ufficio postale Roma 5, Prati | scelta |
+
+## Scelte grafiche dell'app
+
+Non toccano il modello: decidono solo cosa si vede.
+
+| Parametro | Valore | Dove | Stato |
+|---|---|---|---|
+| Strada colorata di arancio | rischio ≥ 60‰ per passaggio (circa il 95° percentile della giornata) | `web/src/components/Mappa.tsx` | scelta |
+| Strada colorata di rosso | rischio ≥ 100‰ (circa il 99° percentile) | `web/src/components/Mappa.tsx` | scelta |
+| Inizio della demo | 15:40, poco prima del temporale | `web/src/lib/orologio.ts` | scelta |
+| Rotazione della mappa | 0,4° per pixel, inclinazione 0,3° per pixel, al massimo 70° | `web/src/components/Mappa.tsx` | scelta, a sensazione come Google Maps |
 
 ## Dati mancanti
 

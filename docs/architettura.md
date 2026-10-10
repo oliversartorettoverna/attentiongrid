@@ -1,41 +1,56 @@
 # Architettura
 
-Tutto è **precalcolato e poi rigiocato**: la demo non dipende da internet né da servizi esterni durante il pitch.
+Il motore **precalcola** la giornata della centrale; il server locale la dà all'app, che la **rigioca**. Mappa, motore e app girano sul laptop: la demo non dipende da internet durante il pitch.
 
 ```mermaid
 flowchart LR
-  A[OSM: strade, edifici,<br/>scuole, negozi] --> T[tratti.geojson]
-  B[EUBUCCO / OSM:<br/>altezza edifici] --> T
+  A[OSM: strade, edifici,<br/>negozi, attraversamenti] --> T[tratti.geojson]
+  B[Copernicus / OSM:<br/>altezza edifici] --> T
+  K[Ministero: scuole] --> T
   M[Open-Meteo:<br/>meteo orario] --> R
   T --> R[rischio.csv.gz<br/>per tratto e fascia]
-  T --> S[sim: giri.json]
+  T --> S[sim: giri.json<br/>150 veicoli, 4 flotte]
   R --> P[engine: previsione<br/>richieste per minuto]
   S --> P
-  P --> E[engine: Erlang C<br/>operatori necessari]
   P --> O[engine: ottimizza<br/>sfasa partenze]
+  P --> E[engine: Erlang C<br/>piano prudente]
   O --> G[engine: rigioco<br/>senza vs con]
-  E --> C[console]
-  G --> C
+  E --> G
+  P --> N[engine: attenzione<br/>livello per veicolo]
+  G --> D[console/data/scenario]
+  N --> D
+  D --> V[server FastAPI]
+  V --> W[app web]
 ```
 
 ## I pezzi
 
-**1. Mappa del rischio** (`data/scripts/`). Divide l'area in tratti di strada e, per ogni tratto e ogni fascia di 5 minuti, calcola la probabilità che un veicolo chieda aiuto passando di lì. I fattori e i pesi sono in `config/pesi_rischio.yaml`.
+**1. Mappa del rischio** (`data/scripts/`). Divide l'area in tratti di strada e, per ogni tratto e ogni fascia di 5 minuti, calcola la probabilità che un veicolo chieda aiuto passando di lì. Fattori e pesi sono in `config/pesi_rischio.yaml`, fonti e stato in `docs/ipotesi.md`.
 
-**2. Simulatore** (`sim/`). Genera i giri di consegna: deposito, fermate su indirizzi veri, percorso più breve sulla rete stradale, velocità massima 25 km/h. Non serve fisica realistica: serve sapere *quale tratto* percorre ogni veicolo *a che ora*.
+**2. Simulatore** (`sim/`). Genera i giri delle 4 flotte della centrale: depositi, fermate su indirizzi veri, percorso più breve sulla rete stradale, velocità del traffico di Roma fino al massimo di ogni veicolo. Non serve fisica realistica: serve sapere *quale tratto* percorre ogni veicolo *a che ora*.
 
-**3. Previsione** (`engine/previsione.py`). Incrocia giri e rischio: per ogni minuto, somma le probabilità di tutti i veicoli presenti. Ne esce la curva delle richieste attese.
+**3. Previsione** (`engine/previsione.py`). Incrocia giri e rischio: per ogni minuto somma le probabilità di tutti i veicoli in strada. Ne esce la curva delle richieste attese.
 
-**4. Turni** (`engine/erlang.py`). Dalla curva calcola quanti operatori servono per rispondere al 90% delle richieste entro 20 secondi (formula di Erlang C, la stessa dei call center). **Già implementato e testato.**
+**4. Turni** (`engine/erlang.py`, `engine/pipeline.py`). Dalla curva calcola quanti operatori servono per prendere il 90% delle richieste entro 20 secondi (Erlang C, la formula dei call center). Il piano prudente rifà il conto con il temporale anticipato e ritardato di un'ora e tiene il massimo; ogni piano si verifica su 20 giornate simulate dalla previsione.
 
-**5. Ottimizzazione** (`engine/ottimizza.py`). Sposta di qualche minuto le partenze (entro un limite) per abbassare il picco della curva. Versione semplice: algoritmo greedy che prova per ogni veicolo gli spostamenti da −10 a +10 minuti e tiene quello che abbassa di più il massimo.
+**5. Ottimizzazione** (`engine/ottimizza.py`). Sposta di qualche minuto le partenze delle consegne (le navette no) per abbassare il picco. Algoritmo greedy: per ogni veicolo prova gli spostamenti da −10 a +10 minuti e tiene quello che abbassa di più il picco.
 
-**6. Rigioco** (`engine/rigioco.py`). Estrae a caso le richieste vere dalle probabilità (stesso seme per i due casi), le mette in coda davanti agli operatori e misura attese e blocchi in coda, senza e con il sistema. Produce i numeri finali.
+**6. Leve in tempo reale** (`engine/tempo_reale.py`). Sopra il piano: operatori misti, prolungamento del turno, reperibilità e meno richieste, con i preavvisi che una centrale ha davvero.
 
-**7. Console** (`console/`). Pagina web statica. Disegna le strade dal GeoJSON (niente mappe online), anima i veicoli, mostra i due pannelli affiancati, la coda degli avvisi e i numeri finali.
+**7. Rigioco** (`engine/rigioco.py`). Estrae le richieste vere dalle probabilità (stessi numeri casuali per i due casi), le mette in coda davanti agli operatori e misura attese e blocchi, senza e con il sistema.
+
+**8. Griglia dell'attenzione** (`engine/attenzione.py`). Per ogni veicolo e ogni minuto, la probabilità di una richiesta nei prossimi 3 minuti: da qui il livello (nominale, attenzione, critico) e l'Autonomy Confidence Score che l'operatore vede.
+
+**9. App** (`web/`, `server/`). Il server FastAPI dà all'app i file di `console/data/scenario/`. L'app (React) disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
+
+## Strumenti di verifica
+
+- `tools/prova_pianificazione.py`: i tre piani con il temporale come previsto, un'ora prima e un'ora dopo (`piani.json`).
+- `tools/sensibilita.py`: il risultato con ogni peso a ±50% (`sensibilita.json`).
+- `tools/taratura.py`: il peso degli attraversamenti contro il dato di Cruise.
 
 ## Perché così
 
-- **Precalcolato:** 16 ore di hackathon non bastano per un sistema in tempo reale, e il wifi della sede non è affidabile.
-- **Formati fissati prima:** dati, motore e console si sviluppano separatamente; la console parte subito con i dati finti.
+- **Precalcolato:** la demo non deve dipendere dalla rete della sede; il motore fa i conti prima, l'app li rigioca.
+- **Formati fissati:** dati, motore e app si sviluppano separatamente; i contratti sono in `docs/formati-dati.md`.
 - **Parametri fuori dal codice:** la giuria chiederà "da dove vengono questi numeri". La risposta è `docs/ipotesi.md`.
