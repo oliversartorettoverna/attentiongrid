@@ -6,8 +6,10 @@ export type Livello = -1 | 0 | 1 | 2 // -1 fermo al deposito, 0 nominale, 1 atte
 export interface Veicolo {
   veicolo_id: string
   flotta: string
-  t0: number
+  t0: number // senza sfasamento: l'ora vera del veicolo è t0 + sposta
+  sposta: number // spostamento della partenza nello scenario con sistema (secondi)
   punti: [number, number][]
+  passate: number[] // secondi dopo t0 e numero del tratto, alternati
 }
 
 export interface Dettaglio {
@@ -116,6 +118,11 @@ export async function caricaScenario(): Promise<Scenario> {
     ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'rigioco.json', 'kpi.json',
       'tratti.geojson', 'edifici.geojson'].map(leggi),
   )
+  const lista: Veicolo[] = veicoli.veicoli.map((v: Veicolo) => ({
+    ...v,
+    sposta: veicoli.spostamenti_s?.[v.veicolo_id] ?? 0,
+    passate: v.passate ?? [],
+  }))
   const piani = await leggi('piani.json').catch(() => null)
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
@@ -123,8 +130,8 @@ export async function caricaScenario(): Promise<Scenario> {
     data: rischio.data,
     flotte: veicoli.flotte,
     passo_s: veicoli.passo_s,
-    veicoli: veicoli.veicoli,
-    perId: new Map(veicoli.veicoli.map((v: Veicolo) => [v.veicolo_id, v])),
+    veicoli: lista,
+    perId: new Map(lista.map((v) => [v.veicolo_id, v])),
     inizio_s: sec(attenzione.inizio),
     livelli: attenzione.livelli,
     probabilita: attenzione.p ?? {},
@@ -148,7 +155,7 @@ export async function caricaScenario(): Promise<Scenario> {
 
 /** Posizione [lon, lat] del veicolo al secondo t, interpolata tra due campioni. */
 export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number] {
-  const x = (t - v.t0) / sc.passo_s
+  const x = (t - v.t0 - v.sposta) / sc.passo_s
   const n = v.punti.length - 1
   if (x <= 0) return [v.punti[0][1], v.punti[0][0]]
   if (x >= n) return [v.punti[n][1], v.punti[n][0]]
@@ -157,6 +164,23 @@ export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number]
   const a = v.punti[i]
   const b = v.punti[i + 1]
   return [a[1] + (b[1] - a[1]) * f, a[0] + (b[0] - a[0]) * f]
+}
+
+/** Tratti che il veicolo percorre tra t e t + durata, con il secondo di ingresso. */
+export function tratti_davanti(v: Veicolo, t: number, durata: number): [string, number][] {
+  const p = v.passate
+  const rel = t - v.t0 - v.sposta
+  let lo = 0
+  let hi = p.length / 2
+  while (lo < hi) {
+    const m = (lo + hi) >> 1
+    if (p[2 * m] < rel) lo = m + 1
+    else hi = m
+  }
+  const out: [string, number][] = []
+  for (let i = lo; i < p.length / 2 && p[2 * i] < rel + durata; i++)
+    out.push([`seg_${String(p[2 * i + 1]).padStart(6, '0')}`, p[2 * i] + v.t0 + v.sposta])
+  return out
 }
 
 export function livello(sc: Scenario, id: string, t: number): Livello {

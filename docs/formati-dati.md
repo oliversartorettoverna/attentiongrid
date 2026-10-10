@@ -137,12 +137,12 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
  "dettagli": [[["boxi_33", 2, 0.742, "Corso Vittorio Emanuele Secondo", "attraversamenti pedonali + pioggia", 58]]]}
 ```
 
-`veicoli.json`: i percorsi per animare i veicoli (scenario con sistema, partenze già sfasate). `t0` è il secondo della giornata del primo punto; i punti `[lat, lon]` sono uno ogni `passo_s` secondi. `spostamenti_s` dice di quanto è stata spostata la partenza di ogni veicolo.
+`veicoli.json`: i percorsi per animare i veicoli, **senza** lo sfasamento delle partenze. `t0` è il secondo della giornata del primo punto; i punti `[lat, lon]` sono uno ogni `passo_s` secondi. `passate` elenca i tratti percorsi, piatti: secondi dopo `t0` e numero del tratto, alternati (`[0, 338, 22, 335]` = tratto 338 a `t0`, tratto 335 22 s dopo). `spostamenti_s` dice di quanto è stata spostata la partenza di ogni veicolo nello scenario con sistema: per allinearsi a livelli e richieste, ogni ora del veicolo va spostata di questo valore.
 ```json
 {"passo_s": 30,
  "flotte": {"boxi": {"nome": "Poste · BOXi", "veicoli": 50}},
  "spostamenti_s": {"boxi_01": 540},
- "veicoli": [{"veicolo_id": "boxi_01", "flotta": "boxi", "t0": 30660, "punti": [[41.90731, 12.46538]]}]}
+ "veicoli": [{"veicolo_id": "boxi_01", "flotta": "boxi", "t0": 30660, "punti": [[41.90731, 12.46538]], "passate": [21, 338, 43, 335]}]}
 ```
 
 `edifici.geojson` (da `data/scripts/07_edifici_console.py`): pianta semplificata degli edifici con l'altezza `h` in metri, per la mappa 3D. Altezza da OSM, poi da Copernicus, poi 15 m di riserva.

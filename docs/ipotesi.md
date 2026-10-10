@@ -156,6 +156,7 @@ Non toccano il modello: decidono solo cosa si vede.
 
 | Parametro | Valore | Dove | Stato |
 |---|---|---|---|
+| Strade colorate | solo i tratti che un veicolo percorrerà nei prossimi 3 minuti | `web/src/components/Mappa.tsx` | scelta: mostra dove servirà un umano, senza accendere mezza città col temporale |
 | Strada colorata di arancio | rischio ≥ 60‰ per passaggio (circa il 95° percentile della giornata) | `web/src/components/Mappa.tsx` | scelta |
 | Strada colorata di rosso | rischio ≥ 100‰ (circa il 99° percentile) | `web/src/components/Mappa.tsx` | scelta |
 | Inizio della demo | 15:40, poco prima del temporale | `web/src/lib/orologio.ts` | scelta |
