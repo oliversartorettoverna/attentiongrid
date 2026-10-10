@@ -52,7 +52,7 @@ class Registro:
                 "flotta_id": self.flotta_di.get(chiuso["veicolo_id"]), "via": chiuso.get("via", ""),
                 "seg_id": chiuso.get("seg_id", ""), "chiamata_s": round(chiuso["chiamata"]),
                 "attesa_s": chiuso["attesa_s"], "durata_s": chiuso["durata_s"], "azione": chiuso["azione"],
-                "causa": chiuso["causa"], "motivo_previsto": chiuso.get("motivo_previsto", ""),
+                "causa": chiuso["causa"], "motivo_previsto": chiuso.get("motivo_previsto", ""), "nota": chiuso.get("nota", ""),
                 "operatore": chiuso.get("operatore", "tu")}
         self.righe.append(riga)
         with open(self.file, "a", encoding="utf-8") as f:

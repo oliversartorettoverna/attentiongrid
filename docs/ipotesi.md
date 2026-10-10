@@ -164,6 +164,16 @@ Il piano prudente rifà il piano con il temporale anticipato e ritardato di un'o
 
 Alla postazione 3 il motore assegna circa una richiesta al minuto nell'ora del temporale: un ritmo da seguire a velocità 1×.
 
+## Copilota AI
+
+| Parametro | Valore | Stato | Dove |
+|---|---|---|---|
+| Modello | `claude-opus-5-5` | scelta | `config/scenario.yaml`, `copilota` |
+| Effort | `low` (risposta in pochi secondi, dentro i 20 s dell'intervento) | scelta | `config/scenario.yaml`, `copilota` |
+| Attesa massima della risposta | 8 s, poi il ripiego dai dati del motore | scelta | `config/scenario.yaml`, `copilota` |
+
+Il copilota suggerisce e scrive la nota; decide l'operatore. Lo score resta quello deterministico del motore: ogni colore ha un motivo spiegabile senza l'AI.
+
 ## Scelte grafiche dell'app
 
 Non toccano il modello: decidono solo cosa si vede.

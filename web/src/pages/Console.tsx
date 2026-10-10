@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Siren, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Siren, Sparkles, X } from 'lucide-react'
 import { Mappa } from '../components/Mappa'
 import { LineaGiornata } from '../components/LineaGiornata'
 import { Stato, coloreLivello } from '../components/Stato'
@@ -8,6 +8,7 @@ import { useScenario } from '../lib/ScenarioContext'
 import { causaSuggerita } from '../lib/cause'
 import { interventi, useOra, type Azione, type RichiestaDiretta } from '../lib/orologio'
 import {
+  indiceFascia,
   livello,
   piuARischio,
   probabilita,
@@ -328,14 +329,70 @@ const AZIONI: { azione: Azione; testo: string; icona: typeof Play; nota: string 
   { azione: 'arresto', testo: 'Arresto', icona: OctagonX, nota: 'fermo per controllo' },
 ]
 
+interface Consiglio {
+  situazione: string
+  azione: Azione
+  perche_azione: string
+  nota_registro: string
+  fonte: 'claude' | 'ripiego'
+}
+
+/** Il copilota: riassume la situazione e suggerisce un'azione. Decide l'operatore. */
+function RiquadroCopilota({ consiglio }: { consiglio: Consiglio | 'attesa' }) {
+  return (
+    <div className="mt-3 rounded-xl p-3 ring-1 ring-info/40" style={{ background: 'color-mix(in srgb, var(--color-info) 8%, transparent)' }}>
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-info">
+          <Sparkles className="size-3.5" /> Copilota
+        </span>
+        {consiglio !== 'attesa' && (
+          <span className="text-[10px] text-muted">{consiglio.fonte === 'claude' ? 'AI · Claude' : 'ripiego, senza AI'}</span>
+        )}
+      </div>
+      {consiglio === 'attesa' ? (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted">
+          <span className="size-1.5 animate-pulse rounded-full bg-info" /> Il copilota legge la situazione…
+        </div>
+      ) : (
+        <>
+          <p className="mt-1.5 text-[13px] leading-snug text-primary">{consiglio.situazione}</p>
+          <p className="mt-1.5 text-xs text-secondary">
+            Suggerisce: <span className="font-medium text-info">{AZIONI.find((x) => x.azione === consiglio.azione)?.testo}</span> ·{' '}
+            {consiglio.perche_azione}
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: number; onChiudi: () => void }) {
   const { cause } = useOra()
   const [azione, setAzione] = useState<Azione | null>(null)
   const [causa, setCausa] = useState<string | null>(null)
+  const [nota, setNota] = useState('')
+  const [consiglio, setConsiglio] = useState<Consiglio | 'attesa' | null>(null)
   const v = sc.perId.get(r.veicolo_id)
   const pv = probabilita(sc, r.veicolo_id, t)
   const suggerita = causaSuggerita(r.motivo_previsto, cause)
   const mia = r.operatore === 'tu'
+  const inCorso = r.stato === 'in_gestione' && mia
+  // appena l'intervento è tuo, il copilota legge la situazione (una volta per richiesta)
+  useEffect(() => {
+    if (!inCorso || consiglio) return
+    setConsiglio('attesa')
+    fetch(`/api/copilota/${r.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score: pv == null ? null : score(pv), pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)] }),
+    })
+      .then((x) => (x.ok ? x.json() : null))
+      .then((c: Consiglio | null) => {
+        setConsiglio(c)
+        if (c) setNota(c.nota_registro)
+      }, () => setConsiglio(null))
+  }, [inCorso]) // eslint-disable-line react-hooks/exhaustive-deps
+  const suggerita_azione = consiglio && consiglio !== 'attesa' ? consiglio.azione : null
   const titolo =
     r.stato === 'in_attesa'
       ? r.assegnata
@@ -396,17 +453,19 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
         </button>
       )}
 
+      {inCorso && consiglio && <RiquadroCopilota consiglio={consiglio} />}
+
       {r.stato === 'in_gestione' && mia && !azione && (
         <>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {AZIONI.map(({ azione: a, testo, icona: Icona, nota }) => (
+            {AZIONI.map(({ azione: a, testo, icona: Icona, nota: spiegazione }) => (
               <button
                 key={a}
                 onClick={() => {
                   setAzione(a)
                   setCausa(suggerita)
                 }}
-                className={`flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left transition-transform active:scale-[0.98] ${
+                className={`relative flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left transition-transform active:scale-[0.98] ${a === suggerita_azione ? 'ring-2 ring-info ring-offset-2 ring-offset-surface' : ''} ${
                   a === 'riparte'
                     ? 'bg-primary text-base'
                     : a === 'arresto'
@@ -417,7 +476,9 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
                 <span className="flex items-center gap-2 text-[13px] font-medium">
                   <Icona className="size-4" /> {testo}
                 </span>
-                <span className={`text-[11px] ${a === 'riparte' ? 'text-base/60' : a === 'arresto' ? 'text-white/70' : 'text-muted'}`}>{nota}</span>
+                <span className={`text-[11px] ${a === 'riparte' ? 'text-base/60' : a === 'arresto' ? 'text-white/70' : 'text-muted'}`}>
+                  {a === suggerita_azione ? 'suggerita dal copilota' : spiegazione}
+                </span>
               </button>
             ))}
           </div>
@@ -452,8 +513,18 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
               </button>
             ))}
           </div>
+          <label className="mt-3 block">
+            <span className="eyebrow">Nota per il registro</span>
+            <textarea
+              value={nota}
+              onChange={(e) => setNota(e.target.value)}
+              rows={2}
+              placeholder="Facoltativa"
+              className="mt-1.5 w-full resize-none rounded-lg bg-elevated px-3 py-2 text-xs text-primary ring-1 ring-line outline-none placeholder:text-muted focus:ring-info/60"
+            />
+          </label>
           <button
-            onClick={() => causa && interventi.chiudi(r.id, azione, causa)}
+            onClick={() => causa && interventi.chiudi(r.id, azione, causa, nota)}
             className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-[13px] font-medium text-base transition-transform active:scale-[0.98]"
           >
             <Check className="size-4" /> Chiudi l'intervento · {AZIONI.find((x) => x.azione === azione)?.testo.toLowerCase()}

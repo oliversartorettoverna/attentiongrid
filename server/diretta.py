@@ -118,12 +118,12 @@ class Giornata:
         elif (tipo == "chiudi" and aperta["operatore"] == "tu" and aperta["stato"] == "in_gestione"
               and c.get("azione") in AZIONI):
             m = miei[aperta["id"]]
-            m.update(chiuso=self.t, azione=c["azione"], causa=str(c.get("causa") or "Altro"))
+            m.update(chiuso=self.t, azione=c["azione"], causa=str(c.get("causa") or "Altro"), nota=str(c.get("nota") or "")[:500])
             chiuso = {
                 "id": aperta["id"], "veicolo_id": aperta["veicolo_id"], "seg_id": aperta["seg_id"], "via": aperta["via"],
                 "chiamata": aperta["inizio"], "attesa_s": round(m["preso"] - aperta["inizio"]),
                 "durata_s": round(self.t - m["preso"]), "azione": m["azione"], "causa": m["causa"],
-                "motivo_previsto": aperta["motivo_previsto"], "operatore": "tu"}
+                "motivo_previsto": aperta["motivo_previsto"], "nota": m["nota"], "operatore": "tu"}
             self.chiusi[self.temporale].append(chiuso)
             if self.registro:
                 self.registro.aggiungi(self.temporale, chiuso)

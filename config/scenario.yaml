@@ -116,3 +116,8 @@ console:                        # l'operatore in console (server/diretta.py)
     - Pioggia o visibilità
     - GPS o sensori
     - Altro
+
+copilota:                       # copilota AI nella scheda intervento (server/copilota.py); chiave ANTHROPIC_API_KEY in .env
+  modello: claude-opus-5-5
+  effort: low                   # risposta in pochi secondi: deve stare dentro i 20 s dell'intervento
+  attesa_max_s: 8               # oltre questo tempo si usa il ripiego costruito dai dati del motore

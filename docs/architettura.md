@@ -45,7 +45,9 @@ flowchart LR
 
 **10. Registro** (`server/registro.py`). Ogni intervento chiuso dall'operatore, con la causa confermata, si salva subito in un file locale e poi su Supabase, riprovando se manca la rete. Il Registro dell'app lo mostra accanto a quelli del motore.
 
-**11. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
+**11. Copilota** (`server/copilota.py`). Quando l'operatore prende una richiesta, Claude legge via, motivo previsto, score, pioggia e storico della via e risponde con la situazione in due frasi, un'azione suggerita e la nota per il registro. Senza rete o senza chiave c'è un ripiego costruito dai dati del motore.
+
+**12. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
 
 ## Strumenti di verifica
 

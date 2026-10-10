@@ -185,7 +185,7 @@ Dal server all'app:
 - `registro`: `{"salvati": 4, "su_supabase": 4, "collegato": true, "errore": ""}`, lo stato del registro (sezione 7).
 - `cause`: le cause tra cui scegliere alla chiusura (`config/scenario.yaml`, `console.cause`). `chiusi`: gli ultimi 50 interventi chiusi dall'operatore in console nella giornata in corso, con azione e causa confermata.
 
-Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento"}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega).
+Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento", "nota": "..."}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega).
 
 La cartella `console/data/scenario_temporale_prima/` ha gli stessi file di `scenario/` (tranne `edifici.geojson`, `piani.json`, `sensibilita.json`) e si fa con `python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_temporale_prima`: il piano dei turni e lo sfasamento delle partenze sono fatti su una previsione con il temporale un'ora più tardi, la giornata vera è quella del 3 ottobre 2024.
 
@@ -205,7 +205,17 @@ Tabella `interventi` (Supabase, progetto AttentionGrid; stessi campi nel file lo
 | `attesa_s`, `durata_s` | Quanto ha aspettato prima che l'operatore la prendesse, quanto è durato l'intervento |
 | `azione` | `riparte`, `deviato`, `assistenza`, `arresto` |
 | `causa`, `motivo_previsto` | La causa confermata dall'operatore e quella che il motore si aspettava |
+| `nota` | La nota per il registro: la scrive il copilota, l'operatore la conferma o la corregge |
 | `operatore`, `registrato_il` | Chi l'ha chiuso e quando è stato salvato |
 
 Tabella `flotte`: `id`, `nome`, `veicoli`. Accesso con la chiave pubblicabile: lettura di entrambe, aggiunta di interventi; niente modifiche né cancellazioni.
+
+## 8. Copilota: `POST /api/copilota/{richiesta_id}` (`server/copilota.py`)
+
+L'app manda `{"score": 58, "pioggia_mm": 5.0}`; il server aggiunge veicolo, flotta, via, motivo previsto, ora, attesa e lo storico della via nella giornata (richieste precedenti, cause confermate) e chiede a Claude. Risposta:
+```json
+{"situazione": "NV-201 fermo in Lungotevere in Sassia: ...", "azione": "riparte",
+ "perche_azione": "...", "nota_registro": "...", "fonte": "claude", "modello": "claude-opus-5-5"}
+```
+`azione` è una di `riparte`, `deviato`, `assistenza`, `arresto`. `fonte` è `ripiego` quando manca la chiave, manca la rete o Claude non risponde entro `copilota.attesa_max_s`: allora il testo è costruito dai dati del motore. Un suggerimento per richiesta, tenuto in memoria. 404 se la richiesta non è più aperta.
 

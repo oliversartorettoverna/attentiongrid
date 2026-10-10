@@ -11,3 +11,4 @@ pyjwt[crypto]>=2.8     # chiave di servizio Copernicus (05_altezze_copernicus.py
 rasterio>=1.3          # lettura delle altezze da satellite (GeoTIFF)
 fastapi>=0.115          # server locale per l'app (server/)
 uvicorn[standard]>=0.30
+anthropic>=1.13            # copilota AI nella scheda intervento (server/copilota.py)

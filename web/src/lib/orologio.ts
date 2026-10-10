@@ -148,7 +148,7 @@ function intervento(comando: 'prendi' | 'chiudi' | 'rilascia', id: number, extra
 export const interventi = {
   prendi: (id: number) => intervento('prendi', id),
   rilascia: (id: number) => intervento('rilascia', id),
-  chiudi: (id: number, azione: Azione, causa: string) => intervento('chiudi', id, { azione, causa }),
+  chiudi: (id: number, azione: Azione, causa: string, nota = '') => intervento('chiudi', id, { azione, causa, nota }),
 }
 
 export const orologio = {
