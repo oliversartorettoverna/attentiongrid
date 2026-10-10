@@ -3,6 +3,7 @@ import { Download, Search } from 'lucide-react'
 import { Pagina, Numero, Titolo } from '../components/Pagina'
 import { sigla } from '../lib/scenario'
 import { useRuolo } from '../lib/ruolo'
+import { useOra } from '../lib/orologio'
 
 interface Riga {
   ora: string
@@ -21,19 +22,20 @@ const PAGINA = 80
 export function Registro() {
   const [righe, setRighe] = useState<Riga[]>([])
   const [ruolo] = useRuolo()
+  const { scenario } = useOra()
   const [gestore, setGestore] = useState('tutti')
   const [cerca, setCerca] = useState('')
   const [quante, setQuante] = useState(PAGINA)
 
   useEffect(() => {
-    fetch('/data/scenario/registro_interventi.csv')
+    fetch(`/data/${scenario}/registro_interventi.csv`)
       .then((r) => r.text())
       .then((testo) => {
         const [testa, ...corpo] = testo.trim().split('\n')
         const campi = testa.split(',')
         setRighe(corpo.map((l) => Object.fromEntries(l.split(',').map((v, i) => [campi[i], v])) as unknown as Riga))
       })
-  }, [])
+  }, [scenario])
 
   const gestori = useMemo(() => [...new Set(righe.map((r) => r.gestore))], [righe])
   const visibili = useMemo(() => {

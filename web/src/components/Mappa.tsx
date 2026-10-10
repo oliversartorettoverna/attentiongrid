@@ -70,6 +70,9 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   const div = useRef<HTMLDivElement>(null)
   const mappa = useRef<MLMap | null>(null)
   const sel = useRef(selezionato)
+  // i dati della giornata possono cambiare (temporale in anticipo): la mappa resta, cambia solo cosa legge
+  const dati = useRef(sc)
+  dati.current = sc
   sel.current = selezionato
 
   useEffect(() => {
@@ -225,12 +228,15 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       m.on('mouseleave', 'veicoli', () => (m.getCanvas().style.cursor = ''))
 
       let fascia = -1
+      let giornata = sc
       let raf = 0
       const disegna = () => {
+        const sc = dati.current
         const t = orologio.ora()
         const f = indiceFascia(sc, t)
-        if (f !== fascia) {
+        if (f !== fascia || sc !== giornata) {
           fascia = f
+          giornata = sc
           for (const [seg, valori] of Object.entries(sc.rischio)) m.setFeatureState({ source: 'tratti', id: seg }, { p: valori[f] })
         }
         const features: GeoJSON.Feature[] = []
@@ -260,7 +266,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
     })
 
     return () => m.remove()
-  }, [sc]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al cambio di selezione la camera va sul veicolo
   useEffect(() => {

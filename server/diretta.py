@@ -7,6 +7,11 @@ finito, poi riparte in ritardo sul suo piano: il ritardo si porta avanti per il 
 Lo stato di un istante è una funzione pura dell'ora (`stato_a`): per questo si può fermare, accelerare
 o saltare avanti e indietro senza perdere la coerenza. Le richieste vengono da rigioco.json (scenario
 con sistema); posizioni e livelli dei veicoli li calcola l'app dai percorsi, spostati del ritardo.
+
+Le giornate sono più d'una: quella prevista (`scenario`) e quella con il temporale un'ora prima del
+previsto (`scenario_temporale_prima`, da `engine/pipeline.py --temporale-ore -1`). Il piano dei turni è
+lo stesso, fatto sulla previsione; cambiano le richieste vere. Si passa dall'una all'altra senza fermare
+l'orologio.
 """
 import asyncio
 import json
@@ -27,15 +32,25 @@ def sec(hhmmss: str) -> int:
     return h * 3600 + m * 60 + (s[0] if s else 0)
 
 
+GIORNATE = {"previsto": "scenario", "prima": "scenario_temporale_prima"}
+
+
+def richieste_per_veicolo(cartella: Path) -> dict:
+    """Le richieste di ogni veicolo in ordine: l'ora è quella del piano, il ritardo la sposta."""
+    rig = json.load(open(cartella / "rigioco.json", encoding="utf-8"))
+    per_veicolo = defaultdict(list)
+    for i, e in enumerate(rig["con"]):
+        per_veicolo[e["veicolo_id"]].append(
+            {"id": i, "veicolo_id": e["veicolo_id"], "seg_id": e["seg_id"], "inizio_piano": sec(e["ora"]),
+             "attesa_s": e["attesa_s"], "durata_s": e["durata_s"], "operatore": e["operatore"]})
+    return per_veicolo
+
+
 class Giornata:
-    def __init__(self, cartella: Path):
-        rig = json.load(open(cartella / "rigioco.json", encoding="utf-8"))
-        # le richieste di ogni veicolo in ordine: l'ora è quella del piano, il ritardo la sposta
-        self.per_veicolo = defaultdict(list)
-        for i, e in enumerate(rig["con"]):
-            self.per_veicolo[e["veicolo_id"]].append(
-                {"id": i, "veicolo_id": e["veicolo_id"], "seg_id": e["seg_id"], "inizio_piano": sec(e["ora"]),
-                 "attesa_s": e["attesa_s"], "durata_s": e["durata_s"], "operatore": e["operatore"]})
+    def __init__(self, dati: Path):
+        # le giornate disponibili: la prevista c'è sempre, le altre se il motore le ha preparate
+        self.giornate = {k: richieste_per_veicolo(dati / c) for k, c in GIORNATE.items() if (dati / c / "rigioco.json").exists()}
+        self.temporale = "previsto"
         self.t = float(INIZIO_DEMO_S)
         self.velocita = 30
         self.in_corsa = False
@@ -59,6 +74,8 @@ class Giornata:
             self.velocita = c["valore"]
         elif tipo == "vai" and isinstance(c.get("valore"), (int, float)):
             self.t = float(min(GIORNO_S[1], max(GIORNO_S[0], c["valore"])))
+        elif tipo == "temporale" and c.get("valore") in self.giornate:
+            self.temporale = c["valore"]
 
     # stato ----------------------------------------------------------------------------------
     def stato_a(self, t: float) -> dict:
@@ -67,7 +84,7 @@ class Giornata:
         Per ogni veicolo si scorrono le sue richieste: la richiesta parte quando l'orologio del veicolo
         (t meno il ritardo accumulato) arriva all'ora del piano; il veicolo resta fermo per attesa + durata."""
         ritardi, aperte = {}, []
-        for v, lista in self.per_veicolo.items():
+        for v, lista in self.giornate[self.temporale].items():
             ritardo = 0.0
             for r in lista:
                 partenza = r["inizio_piano"] + ritardo
@@ -88,7 +105,9 @@ class Giornata:
 
     def messaggio(self) -> dict:
         self.avanza()
-        return {"t": round(self.t, 2), "velocita": self.velocita, "in_corsa": self.in_corsa, **self.stato_a(self.t)}
+        return {"t": round(self.t, 2), "velocita": self.velocita, "in_corsa": self.in_corsa,
+                "temporale": self.temporale, "scenario": GIORNATE[self.temporale],
+                "temporali": list(self.giornate), **self.stato_a(self.t)}
 
 
 class Diretta:

@@ -99,23 +99,23 @@ export const hhmm = (t: number, conSecondi = false) => {
  *  Le soglie del motore (osservazione 0,25, intervento 0,45) diventano 75 e 55. */
 export const score = (p: number) => Math.round(100 * (1 - p))
 
-const leggi = async (nome: string) => {
-  const r = await fetch(`/data/scenario/${nome}`)
+const leggi = async (nome: string, cartella = 'scenario') => {
+  const r = await fetch(`/data/${cartella}/${nome}`)
   if (!r.ok) throw new Error(`${nome}: ${r.status}`)
   return r.json()
 }
 
-export async function caricaScenario(): Promise<Scenario> {
+export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
   const [veicoli, attenzione, rischio, carico, kpi, tratti, edifici] = await Promise.all(
     ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'kpi.json',
-      'tratti.geojson', 'edifici.geojson'].map(leggi),
+      'tratti.geojson', 'edifici.geojson'].map((n) => leggi(n, n === 'edifici.geojson' ? 'scenario' : cartella)),
   )
   const lista: Veicolo[] = veicoli.veicoli.map((v: Veicolo) => ({
     ...v,
     sposta: veicoli.spostamenti_s?.[v.veicolo_id] ?? 0,
     passate: v.passate ?? [],
   }))
-  const piani = await leggi('piani.json').catch(() => null)
+  const piani = await leggi('piani.json').catch(() => null) // i piani verificati valgono per ogni giornata
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
   return {

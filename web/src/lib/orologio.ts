@@ -21,6 +21,9 @@ export interface RichiestaDiretta {
 
 interface StatoServer {
   t: number
+  temporale: string
+  scenario: string
+  temporali: string[]
   velocita: number
   in_corsa: boolean
   ritardi: Record<string, number>
@@ -33,8 +36,11 @@ let inCorsa = false
 let ritardi: Record<string, number> = {}
 let richieste: RichiestaDiretta[] = []
 let collegato = false
+let scenario = 'scenario' // la cartella dei dati della giornata in corso
+let temporale = 'previsto'
+let temporali: string[] = ['previsto']
 let ws: WebSocket | null = null
-let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste }
+let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali }
 const ascoltatori = new Set<() => void>()
 
 const ora = () => {
@@ -43,7 +49,7 @@ const ora = () => {
 }
 
 function pubblica() {
-  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste }
+  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali }
   ascoltatori.forEach((f) => f())
 }
 
@@ -53,6 +59,12 @@ function ricevi(s: StatoServer) {
   inCorsa = s.in_corsa
   ritardi = s.ritardi
   richieste = s.richieste
+  temporali = s.temporali ?? ["previsto"]
+  if (s.scenario !== scenario || s.temporale !== temporale) {
+    scenario = s.scenario
+    temporale = s.temporale
+    pubblica()
+  }
 }
 
 function collega() {
@@ -75,7 +87,7 @@ setInterval(pubblica, 250)
 
 /** Esegue il comando subito nel browser (così più tasti di fila si sommano) e lo manda al server,
  *  che lo rimanda a tutte le schermate. */
-function comanda(comando: string, valore?: number | boolean) {
+function comanda(comando: string, valore?: number | boolean | string) {
   const t = ora()
   if (comando === 'avvia') inCorsa = !inCorsa
   if (comando === 'velocita') velocita = valore as number
@@ -96,6 +108,8 @@ export const orologio = {
   vai: (t: number) => comanda('vai', t),
   avvia: () => comanda('avvia'),
   velocita: (v: number) => comanda('velocita', v),
+  /** Quale giornata vera: 'previsto' o 'prima' (il temporale arriva un'ora prima del previsto). */
+  temporale: (quale: string) => comanda('temporale', quale),
 }
 
 export function useOra() {
