@@ -101,6 +101,9 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       for (const f of sc.tratti.features) for (const c of (f.geometry as GeoJSON.LineString).coordinates) b.extend(c as [number, number])
       const cam = m.cameraForBounds(b, { padding: { top: 40, bottom: 220, left: 380, right: 380 } })
       if (cam) m.jumpTo({ ...cam, pitch: 52, bearing: -17 })
+      // spazio occupato dai pannelli (coda a sinistra, schede a destra, giornata in basso): impostato una volta sola,
+      // così centrare un veicolo non fa scivolare la vista animando i margini
+      m.setPadding({ left: 360, right: 360, top: 0, bottom: 180 })
       m.setMaxBounds([
         [b.getWest() - 0.03, b.getSouth() - 0.02],
         [b.getEast() + 0.03, b.getNorth() + 0.02],
@@ -298,7 +301,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
     const m = mappa.current
     const v = selezionato ? sc.perId.get(selezionato) : null
     if (!m || !v) return
-    m.easeTo({ center: posizione(sc, v, orologio.ora()), zoom: Math.max(m.getZoom(), 15.6), duration: 1200, padding: { left: 0, right: 360, top: 0, bottom: 160 } })
+    m.easeTo({ center: posizione(sc, v, orologio.ora()), zoom: Math.max(m.getZoom(), 15.6), duration: 800 })
   }, [selezionato, sc])
 
   // Il contenitore esterno è posizionato; quello interno lo usa MapLibre (che gli impone position: relative)
