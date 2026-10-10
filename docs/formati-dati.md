@@ -65,56 +65,47 @@ Meteo orario del giorno scelto, da Open-Meteo.
 
 ## 4. `sim/out/giri.json`
 
-I viaggi simulati. Lista di veicoli:
+I giri simulati di tutte le flotte. Lista, un elemento per giro di un veicolo; i tempi sono secondi dalla mezzanotte.
 
 ```json
 [
   {
     "veicolo_id": "boxi_01",
     "flotta": "boxi",
-    "partenza": "14:05:00",
-    "fermate": [{"ora": "14:12:30", "lat": 41.9071, "lon": 12.4612}],
-    "percorso": [
-      {"ora": "14:05:00", "seg_id": "seg_000123", "lat": 41.9062, "lon": 12.4640},
-      {"ora": "14:05:40", "seg_id": "seg_000124", "lat": 41.9066, "lon": 12.4631}
-    ]
+    "partenza": "08:31:21",
+    "fermate": [[30795, 41.905107, 12.462096]],
+    "percorso": [[30681, 338, 1, 22.2], [30703, 335, 1, 22.0]]
   }
 ]
 ```
 
-- `flotta` è uno di `"boxi"`, `"navetta"`, `"robot"`.
-- `percorso` ha un punto ogni volta che il veicolo entra in un tratto nuovo, più punti intermedi ogni 10 secondi (serve per animare).
+- `flotta` è una delle chiavi di `flotte` in `config/scenario.yaml` (`boxi`, `corriere_a`, `corriere_b`, `navette`).
+- `fermate`: `[secondo, lat, lon]` di ogni consegna o fermata di linea.
+- `percorso`: un elemento per tratto percorso, `[secondo di ingresso, numero del tratto, verso, durata in secondi]`. Il numero del tratto è quello di `seg_id` (`338` → `"seg_000338"`); `verso` è `1` da `u` a `v`, `-1` al contrario.
 
 ## 5. `console/data/scenario/*.json` (Oliver)
 
-Quello che la console legge. Stessa struttura in `console/data/esempio/` (dati finti).
+Quello che l'app legge (tramite `server/`). `console/data/esempio/` ha i dati finti della vecchia console statica, con il formato precedente.
 
-`carico.json`: carico previsto dell'operatore nel tempo, con e senza sistema.
+`carico.json`: minuto per minuto, richieste attese, operatori necessari (Erlang C), operatori in turno secondo il piano e veicoli in servizio, senza e con sistema. `senza` ha anche `operatori_sul_picco`, il personale del picco tenuto tutto il giorno.
 ```json
 {
   "passo_min": 1,
-  "orari": ["14:00", "14:01"],
-  "senza": {"richieste_attese": [0.2, 0.3], "operatori_necessari": [1, 1]},
-  "con":   {"richieste_attese": [0.2, 0.2], "operatori_necessari": [1, 1]}
+  "orari": ["06:00", "06:01"],
+  "senza": {"richieste_attese": [0.2, 0.3], "operatori_necessari": [1, 1], "operatori_in_turno": [10, 10], "operatori_sul_picco": [16, 16], "veicoli_attivi": [11, 12]},
+  "con":   {"richieste_attese": [0.2, 0.2], "operatori_necessari": [1, 1], "operatori_in_turno": [3, 3], "veicoli_attivi": [11, 11]}
 }
 ```
 
-`avvisi.json`: gli avvisi in anticipo che l'operatore vede nella coda.
-```json
-[
-  {"ora_avviso": "16:22", "ora_evento": "16:26", "veicolo_id": "boxi_07",
-   "seg_id": "seg_000456", "nome_via": "Via della Scala",
-   "p_intervento": 0.21, "motivi": ["uscita scuola", "pioggia forte", "strada stretta"]}
-]
-```
-
-`rigioco.json`: gli eventi simulati per animare i due pannelli.
+`rigioco.json`: le richieste di aiuto della giornata, in ordine di ora, senza e con sistema. `seg_id` è il tratto dove il veicolo si ferma, `attesa_s` quanto aspetta un operatore, `durata_s` quanto dura l'intervento, `operatore` chi lo prende (da 0).
 ```json
 {
-  "senza": [{"ora": "16:27:10", "veicolo_id": "boxi_07", "tipo": "richiesta", "attesa_s": 140}],
-  "con":   [{"ora": "16:27:10", "veicolo_id": "boxi_07", "tipo": "richiesta", "attesa_s": 12}]
+  "senza": [{"ora": "16:27:10", "veicolo_id": "boxi_07", "seg_id": "seg_000456", "tipo": "richiesta", "attesa_s": 140, "durata_s": 33, "operatore": 2}],
+  "con":   [{"ora": "16:27:10", "veicolo_id": "boxi_07", "seg_id": "seg_000456", "tipo": "richiesta", "attesa_s": 0, "durata_s": 33, "operatore": 1}]
 }
 ```
+
+`registro_interventi.csv`: il registro della giornata con sistema, una riga per intervento: `ora`, `gestore` (nome della flotta), `veicolo`, `via`, `motivo_previsto` e `probabilita_prevista` (il fattore principale e la probabilità del tratto secondo la mappa del rischio), `attesa_s`, `durata_s`, `operatore` (da 1).
 
 `kpi.json`: i numeri finali.
 ```json
@@ -126,7 +117,9 @@ Quello che la console legge. Stessa struttura in `console/data/esempio/` (dati f
 ```
 Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`. `veicoli_fermi_oltre_60s` conta le **richieste** (blocchi) che hanno aspettato più di 60 s, non i veicoli distinti.
 
-`parita_servizio` confronta i due casi **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno per tutto il pomeriggio gli operatori necessari al picco non previsto, `con` segue il piano di Erlang C sulla curva prevista e sfasata. Ogni blocco ha `operatori_medi`, `ore_operatore`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`. I blocchi `senza`/`con` sopra restano il rigioco con `operatori_senza_sistema` fissi (quello animato nei pannelli).
+`parita_servizio` confronta i piani **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno tutto il giorno gli operatori necessari al picco non previsto; `senza_turni` copre ogni turno fisso per il suo picco; `solo_turni` è il piano normale dalla previsione, senza sfasare le partenze; `con` è il piano prudente con le partenze sfasate. Ogni blocco ha `operatori_medi`, `ore_operatore`, `ore_veicolo`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`, `ora_peggiore_entro_attesa_max_pct` e, se c'è `config/economia.yaml`, `costo_veicolo_mese` e `margine_pct`. I blocchi `senza`/`con` in cima restano il rigioco con `operatori_senza_sistema` fissi.
+
+`orario`: una riga per ora con veicoli in servizio, operatori (`operatori_senza`, `operatori_turni`, `operatori_con`) e veicoli per operatore. `per_flotta`: per ogni flotta veicoli, ore di servizio, richieste per veicolo, quota di tempo in assistenza, ore operatore attribuite (in proporzione al lavoro dato agli operatori), veicoli per operatore, costo per veicolo al mese e per ora di servizio, e il dettaglio ora per ora. `economia`: paese, costo orario di una postazione e canone mensile usati per i costi.
 
 `rischio_console.json`: il rischio di ogni tratto per fascia, per colorare le strade, e la data dello scenario (`data`). `p_millesimi` è `p_intervento × 1000` arrotondato (per tenere il file piccolo); `pioggia_mm` è la pioggia dell'ora di ogni fascia, `null` se manca `meteo.csv`.
 ```json

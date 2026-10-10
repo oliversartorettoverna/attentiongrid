@@ -19,7 +19,7 @@ Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`si
 - Se una cosa non funziona, spiega il problema prima di cambiare strada. Non aggirare un controllo che fallisce abbassando la soglia senza dirlo.
 - Le decisioni di merito (quale giorno di pioggia, quale soglia, quali colori) le prende la persona: proponi con i motivi, poi aspetta.
 - Chiavi, token e password non vanno mai nel repository. Se la persona fornisce una chiave, usala tenendola fuori dal repository (file temporaneo o variabile d'ambiente) e cancellala dopo l'uso.
-- Se la tua rete non raggiunge un servizio (Overpass di OpenStreetMap, Open-Meteo, EUBUCCO), non insistere: dai alla persona il comando esatto da lanciare nel suo terminale.
+- Se la tua rete non raggiunge un servizio (Overpass di OpenStreetMap, Open-Meteo, Copernicus), non insistere: dai alla persona il comando esatto da lanciare nel suo terminale.
 
 ## Regole del repository
 
@@ -41,4 +41,4 @@ Chi fa cosa: **Oliver** tutta la parte tecnica: dati (`data/`), simulazione (`si
 - Grafica: palette e regole in `web/src/index.css` (AG Brand v1 nel Drive, 06 Loghi e palette). Il colore si usa solo per gli stati, ogni stato ha anche l'etichetta scritta, il rosso è riservato a critico e arresto.
 - La vecchia console statica in `console/` resta come riserva: `python -m http.server 8000 --directory console`.
 - Prova rapida del motore: `python engine/erlang.py` deve stampare `OK`.
-- Finale multi-flotta: `python engine/pipeline.py --flotte boxi,navetta,robot --out console/data/scenario_multiflotta`.
+- Motore: `python engine/pipeline.py` usa tutte le flotte di `config/scenario.yaml`; `--flotte boxi` per una sola.

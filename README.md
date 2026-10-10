@@ -35,12 +35,12 @@ data/scripts  →  data/processed  →  sim  →  engine  →  console
 | `web/` | L'app: console operatore, planner turni, registro, dashboard flotta, configurazione |
 | `server/` | Server locale (FastAPI): dà all'app i dati dello scenario e, compilata, l'app stessa |
 | `console/` | Dati dello scenario per l'app (`console/data/`) e la vecchia console statica |
-| `tools/` | Dati di esempio e analisi di sensibilità |
+| `tools/` | Verifica dei piani, analisi di sensibilità, taratura, dati di esempio della vecchia console |
 | `docs/` | Architettura, formati dei file, ipotesi e parametri |
 
 Tutta la parte tecnica (dati, simulazione, motore, console) è seguita da Oliver. Riccio fa il rilievo in strada che serve a tarare la mappa del rischio.
 
-I formati dei file tra un modulo e l'altro sono fissati in [`docs/formati-dati.md`](docs/formati-dati.md): chi lavora su un pezzo può andare avanti anche se il pezzo prima non è pronto, usando i file di esempio in `console/data/esempio/`.
+I formati dei file tra un modulo e l'altro sono fissati in [`docs/formati-dati.md`](docs/formati-dati.md): chi lavora su un pezzo può andare avanti anche se il pezzo prima non è pronto.
 
 ## Installazione
 
@@ -70,12 +70,12 @@ python tools/taratura.py                     # controlla il peso degli attravers
 python sim/simula_flotta.py                   # giri di consegna dei veicoli
 
 # 3. Motore
-python engine/pipeline.py                     # previsione, turni, ottimizzazione, rigioco → console/data/scenario/
-
-# Facoltativo: sensibilità dei risultati ai pesi (qualche minuto) → console/data/scenario/sensibilita.json
-python tools/sensibilita.py
-
+python engine/pipeline.py                     # previsione, turni, ottimizzazione, rigioco → console/data/scenario/ (--flotte boxi per una sola flotta)
+python tools/prova_pianificazione.py          # i tre piani con il temporale come previsto, un'ora prima e dopo (2 minuti) → piani.json
 python data/scripts/07_edifici_console.py     # edifici con altezza per la mappa 3D → console/data/scenario/edifici.geojson
+
+# Facoltativo: sensibilità dei risultati ai pesi (circa un'ora, tenere il portatile acceso) → sensibilita.json
+python tools/sensibilita.py
 
 # 4. App (serve anche Node.js 20 o più recente)
 npm --prefix web install
@@ -88,7 +88,7 @@ npm --prefix web run build
 python -m http.server 8000 --directory console
 ```
 
-Per lavorare sulla console senza aspettare dati e simulazione: `python tools/genera_esempio.py` rigenera i file finti in `console/data/esempio/`.
+Per la vecchia console statica: `python tools/genera_esempio.py` rigenera i file finti in `console/data/esempio/` (formato precedente).
 
 ## Regole di lavoro
 
