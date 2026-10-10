@@ -13,6 +13,7 @@ export interface RichiestaDiretta {
   veicolo_id: string
   seg_id: string
   inizio: number // secondo della giornata in cui il veicolo ha chiamato
+  inizio_piano: number // la stessa ora sul piano del veicolo: finché la richiesta è aperta resta lì
   attesa_s: number
   durata_s: number
   operatore: number
@@ -35,6 +36,7 @@ let velocita = 30
 let inCorsa = false
 let ritardi: Record<string, number> = {}
 let richieste: RichiestaDiretta[] = []
+let fermi = new Map<string, number>() // veicolo fermo per una richiesta → ora del piano in cui si è fermato
 let collegato = false
 let scenario = 'scenario' // la cartella dei dati della giornata in corso
 let temporale = 'previsto'
@@ -59,6 +61,7 @@ function ricevi(s: StatoServer) {
   inCorsa = s.in_corsa
   ritardi = s.ritardi
   richieste = s.richieste
+  fermi = new Map(s.richieste.map((r) => [r.veicolo_id, r.inizio_piano]))
   temporali = s.temporali ?? ['previsto']
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
@@ -103,8 +106,10 @@ function comanda(comando: string, valore?: number | boolean | string) {
 
 export const orologio = {
   ora,
-  /** Secondi persi dal veicolo fermo ad aspettare o durante gli interventi: il suo piano slitta di tanto. */
-  ritardo: (id: string) => ritardi[id] ?? 0,
+  /** L'ora sul piano del veicolo: quella della giornata meno il tempo perso fermo ad aspettare o durante gli
+   *  interventi. Un veicolo con una richiesta aperta resta all'ora del piano in cui si è fermato: tra un
+   *  messaggio del server e l'altro non deve avanzare, altrimenti vibra avanti e indietro. */
+  oraVeicolo: (id: string, t: number) => fermi.get(id) ?? t - (ritardi[id] ?? 0),
   vai: (t: number) => comanda('vai', t),
   avvia: () => comanda('avvia'),
   velocita: (v: number) => comanda('velocita', v),

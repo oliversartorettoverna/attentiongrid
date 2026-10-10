@@ -145,7 +145,7 @@ export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
 /** Posizione [lon, lat] del veicolo al secondo t, interpolata tra due campioni. */
 /** L'ora sul piano del veicolo: l'ora della giornata meno il tempo perso fermo ad aspettare o durante gli
  *  interventi. Posizione, livello e probabilità si leggono su questo orologio: un veicolo fermo resta fermo. */
-export const oraVeicolo = (id: string, t: number) => t - orologio.ritardo(id)
+export const oraVeicolo = (id: string, t: number) => orologio.oraVeicolo(id, t)
 
 export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number] {
   const x = (oraVeicolo(v.veicolo_id, t) - v.t0 - v.sposta) / sc.passo_s
