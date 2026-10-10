@@ -11,7 +11,6 @@ import {
   piuARischio,
   probabilita,
   posizione,
-  richiesteAperte,
   score,
   sigla,
   type Livello,
@@ -53,8 +52,11 @@ const entrata = (i: number) => ({
 })
 
 function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => void }) {
-  const { t } = useOra()
-  const aperte = richiesteAperte(sc, t).sort((a, b) => Number(a.inGestione) - Number(b.inGestione) || a.inizio - b.inizio)
+  const { t, richieste } = useOra()
+  // le richieste aperte le manda il server; attesa e stato si aggiornano qui tra un messaggio e l'altro
+  const aperte = richieste
+    .map((r) => ({ ...r, attesa: Math.max(0, Math.min(t - r.inizio, r.attesa_s)), inGestione: t >= r.inizio + r.attesa_s }))
+    .sort((a, b) => Number(a.inGestione) - Number(b.inGestione) || a.inizio - b.inizio)
   const inAttesa = aperte.filter((r) => !r.inGestione).length
   return (
     <motion.section {...entrata(0)} className="glass absolute top-4 left-4 flex max-h-[calc(100%-200px)] w-[340px] flex-col rounded-2xl">
@@ -79,7 +81,7 @@ function Coda({ sc, onSeleziona }: { sc: Scenario; onSeleziona: (id: string) => 
             return (
               <motion.button
                 layout
-                key={`${r.veicolo_id}-${r.inizio}`}
+                key={r.id}
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -161,9 +163,9 @@ function ColonnaDestra({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | n
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="num text-[13px] font-medium">{sigla(d.id)}</span>
-                  <span className="num text-[11px] text-muted">tra {d.tra_s} s</span>
+                  {d.tra_s >= 0 && <span className="num text-[11px] text-muted">tra {d.tra_s} s</span>}
                 </div>
-                <div className="truncate text-xs text-secondary">{d.via}</div>
+                <div className="truncate text-xs text-secondary">{d.via || sc.flotte[sc.perId.get(d.id)?.flotta ?? '']?.nome}</div>
                 <div className="truncate text-[11px] text-muted">{d.motivo}</div>
               </div>
               <Stato livello={d.livello} />
@@ -183,7 +185,9 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
   const s = pv == null ? null : score(pv)
   const a = posizione(sc, v, t)
   const b = posizione(sc, v, t + sc.passo_s)
-  const kmh = Math.round((Math.hypot((b[0] - a[0]) * 82_700, (b[1] - a[1]) * 111_200) / sc.passo_s) * 3.6)
+  const { richieste } = useOra()
+  const fermo = richieste.some((r) => r.veicolo_id === id)
+  const kmh = fermo ? 0 : Math.round((Math.hypot((b[0] - a[0]) * 82_700, (b[1] - a[1]) * 111_200) / sc.passo_s) * 3.6)
   return (
     <motion.section
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -199,7 +203,7 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
           <div className="num mt-1 text-xl font-medium">{sigla(id)}</div>
         </div>
         <div className="flex items-center gap-2">
-          <Stato livello={l as Livello} pulsa={l === 2} />
+          {fermo ? <Stato livello={2} etichetta="Fermo · richiesta" pulsa /> : <Stato livello={l as Livello} pulsa={l === 2} />}
           <button onClick={onChiudi} className="grid size-7 place-items-center rounded-lg text-muted hover:bg-elevated hover:text-primary">
             <X className="size-4" />
           </button>
@@ -213,12 +217,13 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
       </div>
       <BarraScore valore={s ?? 100} sc={sc} />
 
-      {d && (
+      {d?.motivo && (
         <div className="mt-4 rounded-xl bg-elevated p-3">
           <div className="eyebrow">Perché</div>
           <div className="mt-1.5 text-[13px]">{d.motivo}</div>
           <div className="mt-0.5 text-xs text-muted">
-            {d.via} · tra {d.tra_s} s
+            {d.via}
+            {d.tra_s >= 0 && ` · tra ${d.tra_s} s`}
           </div>
         </div>
       )}

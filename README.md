@@ -71,6 +71,7 @@ python sim/simula_flotta.py                   # giri di consegna dei veicoli
 
 # 3. Motore
 python engine/pipeline.py                     # previsione, turni, ottimizzazione, rigioco → console/data/scenario/ (--flotte boxi per una sola flotta)
+python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_temporale_prima   # la giornata con il temporale un'ora prima del previsto (tasto T nella console)
 python tools/prova_pianificazione.py          # i tre piani con il temporale come previsto, un'ora prima e dopo (2 minuti) → piani.json
 python tools/soglie.py                        # confronta le soglie della griglia dell'attenzione (pochi secondi)
 python data/scripts/07_edifici_console.py     # edifici con altezza per la mappa 3D → console/data/scenario/edifici.geojson
@@ -82,7 +83,7 @@ python tools/sensibilita.py
 npm --prefix web install
 npm --prefix web run build
 .venv/bin/uvicorn server.main:app --port 8001
-# poi apri http://localhost:8001 · tasti: spazio avvia/ferma · ← → ±10 min
+# poi apri http://localhost:8001 · tasti: spazio avvia/ferma · ← → ±10 min · T temporale un'ora prima del previsto
 # in sviluppo: server come sopra e, in un altro terminale, npm --prefix web run dev → http://localhost:5173
 
 # Riserva: la vecchia console statica

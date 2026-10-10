@@ -1,4 +1,5 @@
-"""Server locale di AttentionGrid: dà all'app i dati dello scenario e, dopo `npm run build`, l'app stessa.
+"""Server locale di AttentionGrid: dà all'app i dati dello scenario, fa scorrere la giornata in diretta
+(server/diretta.py, WebSocket /api/diretta) e, dopo `npm run build`, serve l'app stessa.
 
 Uso (dalla radice del repository):
     .venv/bin/uvicorn server.main:app --port 8001
@@ -8,15 +9,33 @@ Gira tutto sul laptop: se cade la rete, mappa, simulatore e motore continuano.
 """
 from pathlib import Path
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+from server.diretta import Diretta, Giornata
 
 RADICE = Path(__file__).resolve().parents[1]
 DATI = RADICE / "console" / "data"
 APP_COSTRUITA = RADICE / "web" / "dist"
 
-app = FastAPI(title="AttentionGrid")
+diretta = Diretta(Giornata(DATI))
+
+
+@asynccontextmanager
+async def ciclo_di_vita(_app):
+    await diretta.avvia()
+    yield
+
+
+app = FastAPI(title="AttentionGrid", lifespan=ciclo_di_vita)
+
+
+@app.websocket("/api/diretta")
+async def giornata_in_diretta(ws: WebSocket):
+    await diretta.collega(ws)
 
 
 @app.get("/api/salute")

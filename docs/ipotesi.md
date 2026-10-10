@@ -138,6 +138,8 @@ Il risparmio resta tra **49% e 67%** in tutte le varianti: dipende dalla forma d
 | Un'ora prima del previsto | 198 ore, 73% | 110 ore, 34% | 116 ore, 94% |
 | Un'ora dopo il previsto | 222 ore, 97% | 110 ore, 3% | 117 ore, 94% |
 
+Nella console la giornata con il temporale un'ora prima del previsto (tasto T) usa il piano prudente con le partenze sfasate sulla previsione sbagliata: nell'ora peggiore prende l'88% delle richieste entro 20 s (il piano normale il 34%) e nessuna richiesta aspetta più di 60 s; lo sfasamento fatto sulla previsione sbagliata costa qualche punto rispetto al 94% del piano prudente da solo.
+
 Il piano prudente rifà il piano con il temporale anticipato e ritardato di un'ora (ricalcolando il rischio, perché la pioggia sull'uscita da scuola pesa più della somma delle due) e tiene il massimo: costa 4 ore in più del piano normale e regge in tutti e tre i casi.
 
 ## Scenario della demo

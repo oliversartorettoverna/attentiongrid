@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
   CalendarClock,
+  CloudLightning,
   CloudRain,
   Gauge,
   Pause,
@@ -79,10 +80,12 @@ export function Shell() {
 function BarraAlta() {
   const { pathname } = useLocation()
   const sc = useScenario()
-  const { t, velocita, inCorsa } = useOra()
+  const { t, velocita, inCorsa, collegato, temporale, temporali } = useOra()
   const schermata = SCHERMATE.find((s) => pathname.startsWith(s.to))
   const pioggia = sc ? sc.pioggia_mm[indiceFascia(sc, t)] : null
-  const motore = useMotore()
+
+  const temporaleAttuale = useRef(temporale)
+  temporaleAttuale.current = temporale
 
   useEffect(() => {
     const tasti = (e: KeyboardEvent) => {
@@ -93,6 +96,7 @@ function BarraAlta() {
       }
       if (e.code === 'ArrowRight') orologio.vai(orologio.ora() + 600)
       if (e.code === 'ArrowLeft') orologio.vai(orologio.ora() - 600)
+      if (e.code === 'KeyT') orologio.temporale(temporaleAttuale.current === 'prima' ? 'previsto' : 'prima')
     }
     window.addEventListener('keydown', tasti)
     return () => window.removeEventListener('keydown', tasti)
@@ -138,6 +142,21 @@ function BarraAlta() {
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-2">
+        {temporali.includes('prima') && (
+          <button
+            onClick={() => orologio.temporale(temporale === 'prima' ? 'previsto' : 'prima')}
+            title="La giornata vera con il temporale un'ora prima di quanto previsto la sera prima (tasto T)"
+            className="inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs transition-colors"
+            style={
+              temporale === 'prima'
+                ? { color: 'var(--color-warn)', background: 'color-mix(in srgb, var(--color-warn) 14%, transparent)' }
+                : { color: 'var(--color-secondary)', boxShadow: 'inset 0 0 0 1px var(--color-line)' }
+            }
+          >
+            <CloudLightning className="size-3.5" strokeWidth={1.8} />
+            {temporale === 'prima' ? 'Temporale 1 h prima' : 'Meteo come previsto'}
+          </button>
+        )}
         {pioggia != null && (
           <span
             className="inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs"
@@ -152,23 +171,12 @@ function BarraAlta() {
           </span>
         )}
         <span className="inline-flex h-7 items-center gap-2 rounded-full px-3 text-xs text-secondary ring-1 ring-line ring-inset">
-          <Punto colore={motore ? 'var(--color-ok)' : 'var(--color-offline)'} />
-          {motore ? 'Motore locale' : 'Motore offline'}
+          <Punto colore={collegato ? 'var(--color-ok)' : 'var(--color-offline)'} pulsa={collegato && inCorsa} />
+          {collegato ? 'Diretta · motore locale' : 'Motore offline'}
         </span>
       </div>
     </header>
   )
-}
-
-function useMotore() {
-  const [ok, setOk] = useState(false)
-  useEffect(() => {
-    const prova = () => fetch('/api/salute').then((r) => setOk(r.ok), () => setOk(false))
-    prova()
-    const id = setInterval(prova, 5000)
-    return () => clearInterval(id)
-  }, [])
-  return ok
 }
 
 function SceltaRuolo() {

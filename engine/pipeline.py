@@ -65,11 +65,17 @@ def per_turni(piano: list, turni: list, inizio_s: int) -> list:
     return out
 
 
+def si_puo_spostare_pioggia(rischio_path) -> bool:
+    """Per ricalcolare il rischio con la pioggia spostata servono meteo e tratti accanto al file del rischio."""
+    cartella = Path(rischio_path).parent
+    return (cartella / "meteo.csv").exists() and (cartella / "tratti.geojson").exists()
+
+
 def rischio_pioggia_spostata(rischio_path, config_path, ore: int) -> dict | None:
     """Il rischio ricalcolato con la pioggia prevista spostata di `ore` (per il piano prudente).
     None se non ci sono i dati per ricalcolarlo (per esempio con i dati di esempio)."""
     cartella = Path(rischio_path).parent
-    if not (cartella / "meteo.csv").exists() or not (cartella / "tratti.geojson").exists():
+    if not si_puo_spostare_pioggia(rischio_path):
         return None
     import importlib.util
     import pandas as pd
@@ -241,7 +247,8 @@ def scrivi_registro(percorso, eventi, lista_passate, rischio, fascia, nomi, giri
                         round(r["p_intervento"], 3) if r else "", e["attesa_s"], e["durata_s"], e["operatore"] + 1])
 
 
-def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=None, economia_path=None):
+def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=None, economia_path=None,
+           previsione_ore: int = 0):
     cfg = yaml.safe_load(open(config_path, encoding="utf-8"))
     g, o, oz, rg = cfg["giorno"], cfg["operatori"], cfg["ottimizzazione"], cfg["rigioco"]
     inizio_s, fine_s, fascia = sec(g["inizio"]), sec(g["fine"]), g["fascia_min"]
@@ -252,7 +259,20 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     giri = [x for x in giri if x["flotta"] in flotte]
     cfg_flotte = cfg.get("flotte", {})
     sfasabili = {k for k, v in cfg_flotte.items() if v.get("sfasabile", True)} or None
-    rischio = carica_rischio(rischio_path)
+    # la giornata vera è quella del file; la previsione su cui si fa il piano è uguale, oppure con il
+    # temporale spostato di `previsione_ore` (1 = previsto un'ora dopo: nella realtà arriva un'ora prima).
+    # Piano dei turni e partenze sfasate vengono dalla previsione; richieste, livelli dei veicoli, strade
+    # e pioggia in console dalla giornata vera.
+    reale = carica_rischio(rischio_path)
+
+    def previsto(ore):
+        if ore == 0:
+            return reale
+        r = rischio_pioggia_spostata(rischio_path, config_path, ore)
+        if r is None:
+            raise SystemExit("Per spostare il temporale servono meteo.csv e tratti.geojson accanto al rischio")
+        return r
+    rischio = previsto(previsione_ore)
     nomi = carica_nomi_vie(tratti_path)
     n_veicoli = len(giri)
 
@@ -271,8 +291,8 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     nec_con = piano_operatori(curva_con, fascia, *args_op)
     nec_asciutto = piano_operatori(curva_asciutta, fascia, *args_op)
     turni = o.get("turni", [[g["inizio"], g["fine"]]])
-    req_senza = estrai_richieste(pas_senza, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
-    req_con = estrai_richieste(pas_con, rischio, fascia, rg["seme"], o["durata_media_intervento_s"])
+    req_senza = estrai_richieste(pas_senza, reale, fascia, rg["seme"], o["durata_media_intervento_s"])
+    req_con = estrai_richieste(pas_con, reale, fascia, rg["seme"], o["durata_media_intervento_s"])
     servizio = (inizio_s, o["attesa_max_s"], o["livello_servizio"], 20, 30, rg.get("quota_giornate", 0.9))
     # il piano si fa su giornate simulate dalla previsione (semi diversi da quello del rigioco):
     # chi pianifica conosce le probabilità, non le richieste che arriveranno davvero
@@ -290,7 +310,8 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     # con AttentionGrid: piano prudente. Si rifà il piano con il temporale previsto anticipato e ritardato
     # di un'ora (ricalcolando il rischio: la pioggia sull'uscita da scuola pesa più della somma delle due)
     # e si tiene il massimo; senza meteo si allarga ogni picco di `prudenza_min` prima e dopo
-    varianti = [rischio_pioggia_spostata(rischio_path, config_path, d) for d in (-1, 1)]
+    varianti = ([previsto(previsione_ore + d) for d in (-1, 1)]
+                if si_puo_spostare_pioggia(rischio_path) else [None, None])
     if all(v is not None for v in varianti):
         piani = [a_blocchi(nec_con, blocco_min)] + [
             a_blocchi(piano_operatori(curva_richieste(pas_con, v, inizio_s, fine_s, fascia), fascia, *args_op), blocco_min)
@@ -402,7 +423,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
 
     # 5. Griglia dell'attenzione
     at = cfg["attenzione"]
-    stati = attenzione.livelli(pas_con, rischio, fascia, nomi, inizio_s, fine_s, at["orizzonte_min"] * 60,
+    stati = attenzione.livelli(pas_con, reale, fascia, nomi, inizio_s, fine_s, at["orizzonte_min"] * 60,
                                at["soglia_osservazione"], at["soglia_intervento"])
     valid = attenzione.validazione(stati, req_con, inizio_s, at["anticipo_validazione_min"] * 60)
 
@@ -440,9 +461,9 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
                             "veicoli": percorsi_animazione(giri, geometrie)})
     scrivi("tratti.geojson", gj)
     scrivi("attenzione.json", attenzione.serializza_compatto(stati, inizio_s, at, valid))
-    scrivi("rischio_console.json", rischio_console(rischio, rischio_path, inizio_s, fine_s, fascia,
+    scrivi("rischio_console.json", rischio_console(reale, rischio_path, inizio_s, fine_s, fascia,
                                                    str(g.get("data", ""))))
-    scrivi_registro(out / "registro_interventi.csv", ev_con, pas_con, rischio, fascia, nomi, giri, cfg_flotte)
+    scrivi_registro(out / "registro_interventi.csv", ev_con, pas_con, reale, fascia, nomi, giri, cfg_flotte)
 
     print(f"Scritto in {out}")
     print(f"Veicoli: {n_veicoli} di {len(flotte)} flotte; partenze spostate: {sum(1 for v in sposta.values() if v)}")
@@ -477,5 +498,8 @@ if __name__ == "__main__":
     p.add_argument("--config", default=RADICE / "config/scenario.yaml")
     p.add_argument("--economia", default=RADICE / "config/economia.yaml")
     p.add_argument("--flotte", default="", help="flotte da includere, separate da virgola (vuoto = tutte)")
+    p.add_argument("--previsione-ore", type=int, default=0,
+                   help="piano fatto su una previsione con il temporale spostato di tante ore (1 = previsto un'ora dopo)")
     a = p.parse_args()
-    esegui(a.giri, a.rischio, a.tratti, a.out, a.config, set(filter(None, a.flotte.split(","))) or None, a.economia)
+    esegui(a.giri, a.rischio, a.tratti, a.out, a.config, set(filter(None, a.flotte.split(","))) or None, a.economia,
+           a.previsione_ore)

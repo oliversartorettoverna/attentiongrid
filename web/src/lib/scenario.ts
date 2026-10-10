@@ -1,3 +1,5 @@
+import { orologio } from './orologio'
+
 // Carica lo scenario precalcolato dal motore (console/data/scenario, formati in docs/formati-dati.md)
 // e risponde alle domande della console in ogni istante: dove sta un veicolo, in che stato è, chi chiede aiuto.
 
@@ -19,15 +21,6 @@ export interface Dettaglio {
   via: string
   motivo: string
   tra_s: number
-}
-
-export interface Richiesta {
-  inizio: number // secondo della giornata in cui il veicolo chiama
-  veicolo_id: string
-  seg_id: string
-  attesa_s: number
-  durata_s: number
-  operatore: number
 }
 
 export interface OraKpi {
@@ -82,7 +75,6 @@ export interface Scenario {
     operatori_in_turno: number[]
     veicoli_attivi: number[]
   }
-  richieste: Richiesta[]
   kpi: any
   piani: Piani | null // da tools/prova_pianificazione.py; può mancare
   tratti: GeoJSON.FeatureCollection
@@ -107,23 +99,23 @@ export const hhmm = (t: number, conSecondi = false) => {
  *  Le soglie del motore (osservazione 0,25, intervento 0,45) diventano 75 e 55. */
 export const score = (p: number) => Math.round(100 * (1 - p))
 
-const leggi = async (nome: string) => {
-  const r = await fetch(`/data/scenario/${nome}`)
+const leggi = async (nome: string, cartella = 'scenario') => {
+  const r = await fetch(`/data/${cartella}/${nome}`)
   if (!r.ok) throw new Error(`${nome}: ${r.status}`)
   return r.json()
 }
 
-export async function caricaScenario(): Promise<Scenario> {
-  const [veicoli, attenzione, rischio, carico, rigioco, kpi, tratti, edifici] = await Promise.all(
-    ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'rigioco.json', 'kpi.json',
-      'tratti.geojson', 'edifici.geojson'].map(leggi),
+export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
+  const [veicoli, attenzione, rischio, carico, kpi, tratti, edifici] = await Promise.all(
+    ['veicoli.json', 'attenzione.json', 'rischio_console.json', 'carico.json', 'kpi.json',
+      'tratti.geojson', 'edifici.geojson'].map((n) => leggi(n, n === 'edifici.geojson' ? 'scenario' : cartella)),
   )
   const lista: Veicolo[] = veicoli.veicoli.map((v: Veicolo) => ({
     ...v,
     sposta: veicoli.spostamenti_s?.[v.veicolo_id] ?? 0,
     passate: v.passate ?? [],
   }))
-  const piani = await leggi('piani.json').catch(() => null)
+  const piani = await leggi('piani.json').catch(() => null) // i piani verificati valgono per ogni giornata
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
   return {
@@ -142,9 +134,6 @@ export async function caricaScenario(): Promise<Scenario> {
     pioggia_mm: rischio.pioggia_mm,
     rischio: rischio.p_millesimi,
     carico: { orari: carico.orari, ...carico.con },
-    richieste: rigioco.con
-      .filter((e: any) => e.tipo === 'richiesta')
-      .map((e: any) => ({ ...e, inizio: sec(e.ora) })),
     kpi,
     piani,
     tratti,
@@ -154,8 +143,12 @@ export async function caricaScenario(): Promise<Scenario> {
 }
 
 /** Posizione [lon, lat] del veicolo al secondo t, interpolata tra due campioni. */
+/** L'ora sul piano del veicolo: l'ora della giornata meno il tempo perso fermo ad aspettare o durante gli
+ *  interventi. Posizione, livello e probabilità si leggono su questo orologio: un veicolo fermo resta fermo. */
+export const oraVeicolo = (id: string, t: number) => orologio.oraVeicolo(id, t)
+
 export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number] {
-  const x = (t - v.t0 - v.sposta) / sc.passo_s
+  const x = (oraVeicolo(v.veicolo_id, t) - v.t0 - v.sposta) / sc.passo_s
   const n = v.punti.length - 1
   if (x <= 0) return [v.punti[0][1], v.punti[0][0]]
   if (x >= n) return [v.punti[n][1], v.punti[n][0]]
@@ -168,39 +161,36 @@ export function posizione(sc: Scenario, v: Veicolo, t: number): [number, number]
 
 export function livello(sc: Scenario, id: string, t: number): Livello {
   const s = sc.livelli[id]
-  const c = s?.[Math.floor((t - sc.inizio_s) / 60)]
+  const c = s?.[Math.floor((oraVeicolo(id, t) - sc.inizio_s) / 60)]
   return c === undefined || c === '-' ? -1 : (Number(c) as Livello)
 }
 
 /** Probabilità di una richiesta nei prossimi minuti per qualsiasi veicolo; null se è fermo o il dato manca. */
 export function probabilita(sc: Scenario, id: string, t: number): number | null {
-  const k = Math.floor((t - sc.inizio_s) / 60)
+  const k = Math.floor((oraVeicolo(id, t) - sc.inizio_s) / 60)
   const c = sc.probabilita[id]?.slice(2 * k, 2 * k + 2)
   return !c || c === '--' ? null : Number(c) / 100
 }
 
-/** I veicoli più a rischio in questo minuto, con via, motivo e quanto manca. */
+/** I veicoli più a rischio adesso, ognuno letto sul suo orologio. Via, motivo e tempo al tratto vengono dai
+ *  dettagli del motore (i 12 più a rischio di ogni minuto); per gli altri restano vuoti. */
 export function piuARischio(sc: Scenario, t: number): Dettaglio[] {
-  const riga = sc.dettagli[Math.floor((t - sc.inizio_s) / 60)] ?? []
-  return riga.map((d) => ({
-    id: d[0] as string,
-    livello: d[1] as Livello,
-    p: d[2] as number,
-    via: d[3] as string,
-    motivo: d[4] as string,
-    tra_s: d[5] as number,
-  }))
-}
-
-/** Richieste aperte al secondo t: in attesa di un operatore oppure in gestione. */
-export function richiesteAperte(sc: Scenario, t: number) {
-  const out: (Richiesta & { attesa: number; inGestione: boolean })[] = []
-  for (const r of sc.richieste) {
-    if (r.inizio > t) break
-    const fine = r.inizio + r.attesa_s + r.durata_s
-    if (t < fine) out.push({ ...r, attesa: Math.min(t - r.inizio, r.attesa_s), inGestione: t >= r.inizio + r.attesa_s })
+  const out: Dettaglio[] = []
+  for (const v of sc.veicoli) {
+    const p = probabilita(sc, v.veicolo_id, t)
+    if (p == null) continue
+    const minuto = Math.floor((oraVeicolo(v.veicolo_id, t) - sc.inizio_s) / 60)
+    const d = sc.dettagli[minuto]?.find((x) => x[0] === v.veicolo_id)
+    out.push({
+      id: v.veicolo_id,
+      livello: livello(sc, v.veicolo_id, t),
+      p,
+      via: (d?.[3] as string) ?? '',
+      motivo: (d?.[4] as string) ?? '',
+      tra_s: (d?.[5] as number) ?? -1,
+    })
   }
-  return out
+  return out.sort((a, b) => b.p - a.p)
 }
 
 export function indiceFascia(sc: Scenario, t: number) {
