@@ -112,7 +112,8 @@ class Giornata:
         if tipo == "prendi" and aperta["stato"] == "in_attesa":
             miei[aperta["id"]] = {"preso": self.t, "chiuso": None, "azione": None, "causa": None}
         elif tipo == "rilascia" and aperta["operatore"] == "tu" and aperta["stato"] == "in_gestione":
-            miei.pop(aperta["id"], None)
+            # la prende un collega da adesso, con la durata del rigioco: il tempo già passato con te resta
+            miei[aperta["id"]]["ceduto"] = self.t
         elif (tipo == "chiudi" and aperta["operatore"] == "tu" and aperta["stato"] == "in_gestione"
               and c.get("azione") in AZIONI):
             m = miei[aperta["id"]]
@@ -138,13 +139,26 @@ class Giornata:
                     break
                 mio = self.miei[self.temporale].get(r["id"])
                 if mio and mio["preso"] <= t:
+                    ceduto = mio.get("ceduto")
+                    if ceduto is not None and ceduto <= t:
+                        # passata a un collega: la prende da quel momento e ci mette la durata del rigioco
+                        fine = ceduto + r["durata_s"]
+                        if t < fine:
+                            aperte.append({**r, "inizio": round(partenza, 1), "operatore": self.postazione + 1,
+                                           "assegnata": False, "attesa_s": round(ceduto - partenza),
+                                           "stato": "in_gestione"})
+                            ritardo += t - partenza
+                            break
+                        ritardo += fine - partenza
+                        continue
                     # presa dall'operatore in console: il veicolo resta fermo finché non la chiude, più il fermo
                     # dell'azione scelta (assistenza in strada, arresto)
                     fine = mio["chiuso"] + self.fermo_dopo.get(mio["azione"], 0) if mio["chiuso"] is not None else None
                     if fine is None or t < fine:
                         aperte.append({**r, "inizio": round(partenza, 1), "operatore": "tu",
                                        "attesa_s": round(mio["preso"] - partenza),
-                                       "stato": "in_gestione" if mio["chiuso"] is None else mio["azione"]})
+                                       "stato": "in_gestione" if mio["chiuso"] is None else mio["azione"],
+                                       **({"riparte": round(fine, 1)} if fine is not None else {})})
                         ritardo += t - partenza
                         break
                     ritardo += fine - partenza

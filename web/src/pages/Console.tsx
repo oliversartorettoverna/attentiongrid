@@ -104,6 +104,17 @@ function Coda({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSe
           </span>
         )}
       </header>
+      <div className="flex gap-3 px-4 pb-2.5 text-[10.5px] text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-warn" /> aspetta
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-info" /> in gestione
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full ring-2 ring-offline" /> chiusa, ancora fermo
+        </span>
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {aperte.length === 0 && <div className="px-2 py-6 text-center text-sm text-muted">Nessun veicolo sta chiedendo aiuto.</div>}
         <AnimatePresence initial={false}>
@@ -136,6 +147,7 @@ function Coda({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSe
                     <span className="truncate text-xs text-muted">{sc.flotte[sc.perId.get(r.veicolo_id)?.flotta ?? '']?.nome}</span>
                   </div>
                   <div className="truncate text-xs text-secondary">{r.via || sc.nomiVie.get(r.seg_id) || 'Via senza nome'}</div>
+                  <div className="num truncate text-[11px] text-muted">{didascalia(r, t)}</div>
                 </div>
                 <Etichetta r={r} />
               </motion.button>
@@ -145,6 +157,15 @@ function Coda({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSe
       </div>
     </motion.section>
   )
+}
+
+const mmss = (s: number) => (s < 60 ? `${Math.floor(s)} s` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`)
+
+/** Cosa sta succedendo, in parole: aspetta, in gestione, riparte tra. */
+function didascalia(r: Aperta, t: number) {
+  if (r.stato === 'in_attesa') return `aspetta da ${mmss(r.trascorsi)}`
+  if (r.stato === 'in_gestione') return `in gestione da ${mmss(Math.max(0, t - r.presa))}`
+  return `riparte tra ${mmss(Math.max(0, (r.riparte ?? t) - t))}`
 }
 
 function Etichetta({ r }: { r: Aperta }) {
@@ -165,8 +186,16 @@ function Timer({ r, t, grande = false }: { r: Aperta; t: number; grande?: boolea
   const raggio = 15
   const giro = 2 * Math.PI * raggio
   const attende = r.stato === 'in_attesa'
-  const secondi = attende ? r.trascorsi : Math.max(0, t - r.presa)
-  const quota = attende ? Math.min(1, secondi / ATTESA_MAX_S) : r.operatore === 'tu' ? 1 : Math.min(1, secondi / Math.max(1, r.durata_s))
+  const fermo = r.stato === 'assistenza' || r.stato === 'arresto'
+  const mancano = Math.max(0, (r.riparte ?? t) - t)
+  const secondi = attende ? r.trascorsi : fermo ? mancano : Math.max(0, t - r.presa)
+  const quota = attende
+    ? Math.min(1, secondi / ATTESA_MAX_S)
+    : fermo
+      ? Math.min(1, mancano / Math.max(1, (r.riparte ?? t) - r.presa))
+      : r.operatore === 'tu'
+        ? 1
+        : Math.min(1, secondi / Math.max(1, r.durata_s))
   const colore = attende
     ? secondi > ATTESA_MAX_S
       ? 'var(--color-critical)'

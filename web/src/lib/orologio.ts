@@ -22,6 +22,7 @@ export interface RichiestaDiretta {
   motivo_previsto: string
   // in gestione; oppure chiusa da te ma il veicolo è ancora fermo per assistenza in strada o arresto
   stato: 'in_attesa' | 'in_gestione' | 'assistenza' | 'arresto'
+  riparte?: number // per assistenza e arresto: quando il veicolo riparte (secondo della giornata)
 }
 
 export type Azione = 'riparte' | 'deviato' | 'assistenza' | 'arresto'
