@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Satellite, Siren, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Satellite, Siren, Sparkles, Unplug, X } from 'lucide-react'
 import { Mappa } from '../components/Mappa'
 import { LineaGiornata } from '../components/LineaGiornata'
 import { Stato, coloreLivello } from '../components/Stato'
 import { useScenario } from '../lib/ScenarioContext'
 import { causaSuggerita } from '../lib/cause'
-import { interventi, useOra, type Azione, type RichiestaDiretta } from '../lib/orologio'
+import { interventi, useOra, type Azione, type DalVivo, type RichiestaDiretta } from '../lib/orologio'
 import {
   indiceFascia,
   livello,
@@ -31,7 +31,7 @@ export function Console() {
   // Invio prende la prima richiesta che aspetta te e apre la sua scheda
   useEffect(() => {
     const tasto = (e: KeyboardEvent) => {
-      if (e.code !== 'Enter' || (e.target as HTMLElement).tagName === 'INPUT') return
+      if (e.code !== 'Enter' || ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
       const prima = richieste.filter((r) => r.assegnata && r.stato === 'in_attesa').sort((a, b) => a.inizio - b.inizio)[0]
       if (prima) {
         interventi.prendi(prima.id)
@@ -46,6 +46,7 @@ export function Console() {
     <div className="absolute inset-0 overflow-hidden">
       <Mappa sc={sc} selezionato={sel} onSeleziona={setSel} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(9,9,11,0.85))]" />
+      <AvvisoOffline onSeleziona={setSel} />
       <Coda sc={sc} sel={sel} onSeleziona={setSel} />
       <ColonnaDestra sc={sc} sel={sel} onSeleziona={setSel} />
       <Fondo sc={sc} />
@@ -230,7 +231,8 @@ function ColonnaDestra({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | n
       {/* la scheda vecchia esce prima che entri la nuova: niente schede sovrapposte passando da un veicolo all'altro */}
       <AnimatePresence mode="wait" initial={false}>
         {sel && aperta && <SchedaIntervento key={`i-${aperta.id}`} sc={sc} r={apri(aperta, t)} t={t} onChiudi={() => onSeleziona(null)} />}
-        {sel && !aperta && <SchedaVeicolo key={sel} sc={sc} id={sel} t={t} onChiudi={() => onSeleziona(null)} />}
+        {sel && !aperta && sel === 'boxi_sala' && <SchedaDalVivo key={sel} onChiudi={() => onSeleziona(null)} />}
+        {sel && !aperta && sel !== 'boxi_sala' && <SchedaVeicolo key={sel} sc={sc} id={sel} t={t} onChiudi={() => onSeleziona(null)} />}
       </AnimatePresence>
       <motion.section {...entrata(1)} className={`glass min-h-0 flex-col rounded-2xl ${sel && aperta ? 'hidden' : 'flex'}`}>
         <header className="flex items-center justify-between px-4 pt-4 pb-3">
@@ -372,7 +374,8 @@ function RiquadroCopilota({ consiglio }: { consiglio: Consiglio | 'attesa' }) {
 }
 
 function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: number; onChiudi: () => void }) {
-  const { cause } = useOra()
+  const { cause, dalVivo } = useOra()
+  const live = r.veicolo_id === 'boxi_sala' ? dalVivo : null
   const [azione, setAzione] = useState<Azione | null>(null)
   const [causa, setCausa] = useState<string | null>(null)
   const [nota, setNota] = useState('')
@@ -393,7 +396,15 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
       body: JSON.stringify({
         score: pv == null ? null : score(pv),
         pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)],
-        gps: gps ? (gps.stato === 'ok' ? `buono, circa ${Math.round(gps.metri ?? 0)} m` : testoGps(gps)) : null,
+        gps: live
+          ? live.stato === 'offline'
+            ? `nessun segnale da ${Math.round(live.ultimo_segnale_s)} s, collegamento perso`
+            : `precisione misurata ${Math.round(live.precisione_m)} m (telefono al chiuso o all'aperto)`
+          : gps
+            ? gps.stato === 'ok'
+              ? `buono, circa ${Math.round(gps.metri ?? 0)} m`
+              : testoGps(gps)
+            : null,
       }),
     })
       .then((x) => (x.ok ? x.json() : null))
@@ -428,7 +439,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
     >
       <div className="flex items-start justify-between">
         <div>
-          <div className="eyebrow">{v ? sc.flotte[v.flotta]?.nome : ''}</div>
+          <div className="eyebrow">{v ? sc.flotte[v.flotta]?.nome : live ? 'Poste · BOXi dal vivo' : ''}</div>
           <div className="num mt-1 text-xl font-medium">{sigla(r.veicolo_id)}</div>
           <div className="mt-0.5 text-[13px] text-secondary">{titolo}</div>
         </div>
@@ -447,7 +458,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
           {r.motivo_previsto ? `Il motore se lo aspettava: ${r.motivo_previsto}` : 'Il motore non aveva un motivo prevalente'}
           {pv != null && ` · score ${score(pv)}`}
         </div>
-        <RigaGps gps={gps} />
+        {live ? <RigaPrecisione d={live} /> : <RigaGps gps={gps} />}
       </div>
 
       {r.stato === 'in_attesa' && (
@@ -552,6 +563,94 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
         </div>
       )}
     </motion.section>
+  )
+}
+
+const COLORE_DAL_VIVO: Record<DalVivo['stato'], string> = {
+  nominale: 'var(--color-info)',
+  attenzione: 'var(--color-warn)',
+  critico: 'var(--color-critical)',
+  offline: 'var(--color-offline)',
+}
+
+/** La precisione vera del GPS del telefono e da quanto non arriva un segnale. */
+function RigaPrecisione({ d }: { d: DalVivo }) {
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: COLORE_DAL_VIVO[d.stato] }}>
+      {d.stato === 'offline' ? <Unplug className="size-3.5" /> : <Satellite className="size-3.5" />}
+      {d.stato === 'offline'
+        ? `Offline · nessun segnale da ${Math.round(d.ultimo_segnale_s)} s`
+        : `GPS misurato · ±${d.precisione_m >= 100 ? '>100' : Math.round(d.precisione_m)} m`}
+      {d.paracadute && <span className="text-muted"> · paracadute</span>}
+    </div>
+  )
+}
+
+/** Il BOXi in sala: il telefono vero, con la precisione del suo GPS. */
+function SchedaDalVivo({ onChiudi }: { onChiudi: () => void }) {
+  const { dalVivo: d } = useOra()
+  if (!d) return null
+  const colore = COLORE_DAL_VIVO[d.stato]
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: -10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="glass shrink-0 rounded-2xl p-4"
+      style={{ boxShadow: `0 0 0 1px color-mix(in srgb, ${colore} 50%, transparent), 0 24px 48px -24px rgb(0 0 0 / 0.8)` }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="eyebrow">Poste · BOXi dal vivo</div>
+          <div className="mt-1 text-xl font-medium">BOXi in sala</div>
+          <div className="mt-0.5 text-[13px] text-secondary">Un telefono vero, con il suo GPS</div>
+        </div>
+        <button onClick={onChiudi} className="grid size-7 place-items-center rounded-lg text-muted hover:bg-elevated hover:text-primary">
+          <X className="size-4" />
+        </button>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-xl bg-line ring-1 ring-line">
+        <Cifra etichetta="Score" valore={d.p == null ? '—' : score(d.p)} colore={d.stato === 'nominale' ? undefined : colore} />
+        <Cifra etichetta="Precisione" valore={d.stato === 'offline' ? '—' : d.precisione_m >= 100 ? '>100' : Math.round(d.precisione_m)} unita="m" />
+        <Cifra etichetta="Ultimo segnale" valore={Math.round(d.ultimo_segnale_s)} unita="s fa" />
+      </div>
+      <div className="mt-3">
+        <Stato
+          livello={d.stato === 'offline' ? -1 : d.stato === 'critico' ? 2 : d.stato === 'attenzione' ? 1 : 0}
+          etichetta={d.stato === 'offline' ? 'Offline · collegamento perso' : d.stato[0].toUpperCase() + d.stato.slice(1)}
+          pulsa={d.stato === 'critico'}
+        />
+      </div>
+      <RigaPrecisione d={d} />
+      <p className="mt-3 text-xs leading-relaxed text-muted">
+        All'aperto il GPS è preciso; al chiuso la precisione peggiora e lo score scende. Sotto 65 apre una richiesta per te.
+      </p>
+    </motion.section>
+  )
+}
+
+/** Avviso in cima alla console quando il BOXi in sala perde il collegamento. */
+function AvvisoOffline({ onSeleziona }: { onSeleziona: (id: string) => void }) {
+  const { dalVivo: d } = useOra()
+  return (
+    <AnimatePresence>
+      {d?.stato === 'offline' && (
+        <motion.button
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          onClick={() => onSeleziona('boxi_sala')}
+          className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-critical px-4 py-2 text-[13px] font-medium text-white shadow-lg"
+        >
+          <span className="relative flex size-2">
+            <span className="pulse-ring absolute inset-0 rounded-full bg-white" />
+            <span className="relative size-2 rounded-full bg-white" />
+          </span>
+          BOXi in sala offline · collegamento perso da {Math.round(d.ultimo_segnale_s)} s
+        </motion.button>
+      )}
+    </AnimatePresence>
   )
 }
 

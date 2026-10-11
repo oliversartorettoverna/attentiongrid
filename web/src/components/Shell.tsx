@@ -89,14 +89,18 @@ function BarraAlta() {
 
   useEffect(() => {
     const tasti = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') return
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return // si sta scrivendo
       if (e.code === 'Space') {
         e.preventDefault()
         orologio.avvia()
       }
       if (e.code === 'ArrowRight') orologio.vai(orologio.ora() + 600)
       if (e.code === 'ArrowLeft') orologio.vai(orologio.ora() - 600)
-      if (e.code === 'KeyT') orologio.temporale(temporaleAttuale.current === 'prima' ? 'previsto' : 'prima')
+      if (e.code === 'KeyT' && !e.shiftKey) orologio.temporale(temporaleAttuale.current === 'prima' ? 'previsto' : 'prima')
+      // paracadute per il palco, sul BOXi in sala: Maiusc+G GPS debole, Maiusc+O offline, Maiusc+N normale
+      if (e.shiftKey && e.code === 'KeyG') orologio.paracadute('gps')
+      if (e.shiftKey && e.code === 'KeyO') orologio.paracadute('offline')
+      if (e.shiftKey && e.code === 'KeyN') orologio.paracadute('normale')
     }
     window.addEventListener('keydown', tasti)
     return () => window.removeEventListener('keydown', tasti)

@@ -33,6 +33,18 @@ export interface StatoRegistro {
   errore: string
 }
 
+/** Il telefono che fa da BOXi in sala (server/dal_vivo.py): posizione e precisione vere del GPS. */
+export interface DalVivo {
+  id: string
+  lat: number
+  lon: number
+  precisione_m: number
+  ultimo_segnale_s: number
+  stato: 'nominale' | 'attenzione' | 'critico' | 'offline'
+  p: number | null
+  paracadute: 'gps' | 'offline' | null
+}
+
 export type Azione = 'riparte' | 'deviato' | 'assistenza' | 'arresto'
 
 export interface InterventoChiuso {
@@ -55,6 +67,7 @@ interface StatoServer {
   cause?: string[]
   chiusi?: InterventoChiuso[]
   registro?: StatoRegistro | null
+  dal_vivo?: DalVivo | null
   velocita: number
   in_corsa: boolean
   ritardi: Record<string, number>
@@ -74,8 +87,9 @@ let temporali: string[] = ['previsto']
 let cause: string[] = []
 let chiusi: InterventoChiuso[] = []
 let registro: StatoRegistro | null = null
+let dalVivo: DalVivo | null = null
 let ws: WebSocket | null = null
-let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro: registro as StatoRegistro | null }
+let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro: registro as StatoRegistro | null, dalVivo: dalVivo as DalVivo | null }
 const ascoltatori = new Set<() => void>()
 
 const ora = () => {
@@ -84,7 +98,7 @@ const ora = () => {
 }
 
 function pubblica() {
-  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro }
+  pubblicato = { t: ora(), velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro, dalVivo }
   ascoltatori.forEach((f) => f())
 }
 
@@ -99,6 +113,7 @@ function ricevi(s: StatoServer) {
   cause = s.cause ?? []
   chiusi = s.chiusi ?? []
   registro = s.registro ?? null
+  dalVivo = s.dal_vivo ?? null
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
     temporale = s.temporale
@@ -160,6 +175,12 @@ export const orologio = {
   vai: (t: number) => comanda('vai', t),
   avvia: () => comanda('avvia'),
   velocita: (v: number) => comanda('velocita', v),
+  /** Il BOXi in sala adesso (letto dalla mappa a ogni fotogramma). */
+  dalVivo: () => dalVivo,
+  /** Paracadute per il palco: forza GPS debole o offline sul BOXi in sala; 'normale' lo toglie. */
+  paracadute: (valore: 'gps' | 'offline' | 'normale') => {
+    if (ws && collegato) ws.send(JSON.stringify({ comando: 'paracadute', valore }))
+  },
   /** Quale giornata vera: 'previsto' o 'prima' (il temporale arriva un'ora prima del previsto). */
   temporale: (quale: string) => comanda('temporale', quale),
 }

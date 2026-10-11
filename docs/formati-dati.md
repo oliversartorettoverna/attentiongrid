@@ -182,10 +182,11 @@ Dal server all'app:
 - `temporale`: quale giornata vera si sta giocando, `previsto` o `prima` (il temporale arriva un'ora prima di quanto previsto la sera prima); `scenario` è la cartella dei suoi dati in `console/data/`, che l'app ricarica quando cambia; `temporali` le giornate disponibili.
 - `ritardi`: secondi persi da ogni veicolo, fermo ad aspettare o durante gli interventi. L'app legge posizione, livello e probabilità del veicolo all'ora `t − ritardo`.
 - `richieste`: quelle aperte. `inizio` è quando il veicolo ha chiamato (l'ora del piano `inizio_piano` più il ritardo accumulato fino a lì); `stato` è `in_attesa` finché un operatore non la prende, poi `in_gestione`; `assistenza` e `arresto` sono richieste chiuse dall'operatore in console con quell'azione, con il veicolo ancora fermo fino a `riparte` (secondo della giornata). Una richiesta passata a un collega la prende un operatore simulato da quel momento, con la durata del rigioco. `operatore` è il numero dell'operatore simulato (da 0) oppure `"tu"`; `assegnata` dice se il motore l'ha assegnata alla postazione della console: allora aspetta l'operatore fino a `passa_a_collega_dopo_s` (è il valore di `attesa_s`). `via` e `motivo_previsto` vengono dal registro del motore. Il veicolo resta fermo per `attesa_s + durata_s`, o finché l'operatore in console non chiude.
+- `dal_vivo`: il BOXi in sala, `null` finché il telefono non si collega (sezione 9).
 - `registro`: `{"salvati": 4, "su_supabase": 4, "collegato": true, "errore": ""}`, lo stato del registro (sezione 7).
 - `cause`: le cause tra cui scegliere alla chiusura (`config/scenario.yaml`, `console.cause`). `chiusi`: gli ultimi 50 interventi chiusi dall'operatore in console nella giornata in corso, con azione e causa confermata.
 
-Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento", "nota": "..."}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega).
+Dall'app al server: `{"comando": "avvia", "valore": true}` (in corsa o in pausa), `{"comando": "velocita", "valore": 30}` (1, 10, 30 o 60), `{"comando": "vai", "valore": 58200}` (salta a quell'ora), `{"comando": "temporale", "valore": "prima"}` (cambia giornata senza fermare l'orologio), `{"comando": "prendi", "id": 1834}` (l'operatore in console prende una richiesta in attesa), `{"comando": "chiudi", "id": 1834, "azione": "riparte", "causa": "Pedoni in attraversamento", "nota": "..."}` (azione tra `riparte`, `deviato`, `assistenza`, `arresto`), `{"comando": "rilascia", "id": 1834}` (passa a un collega), `{"comando": "paracadute", "valore": "gps"}` (forza GPS debole sul BOXi in sala; `"offline"` lo forza offline, `"normale"` toglie il paracadute).
 
 La cartella `console/data/scenario_temporale_prima/` ha gli stessi file di `scenario/` (tranne `edifici.geojson`, `piani.json`, `sensibilita.json`) e si fa con `python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_temporale_prima`: il piano dei turni e lo sfasamento delle partenze sono fatti su una previsione con il temporale un'ora più tardi, la giornata vera è quella del 3 ottobre 2024.
 
@@ -218,4 +219,23 @@ L'app manda `{"score": 58, "pioggia_mm": 5.0}`; il server aggiunge veicolo, flot
  "perche_azione": "...", "nota_registro": "...", "fonte": "claude", "modello": "claude-opus-5-5"}
 ```
 `azione` è una di `riparte`, `deviato`, `assistenza`, `arresto`. `fonte` è `ripiego` quando manca la chiave, manca la rete o Claude non risponde entro `copilota.attesa_max_s`: allora il testo è costruito dai dati del motore. Un suggerimento per richiesta, tenuto in memoria. 404 se la richiesta non è più aperta.
+
+## 9. BOXi in sala (`telefono/`, `server/dal_vivo.py`, Supabase)
+
+Il telefono apre `/telefono/` (in https) e ogni secondo scrive la sua posizione nella tabella `posizioni_live` di Supabase, una sola riga:
+
+| Campo | Significato |
+|---|---|
+| `veicolo` | Sempre `boxi_sala` (la chiave pubblicabile può scrivere solo questa riga) |
+| `lat`, `lon`, `precisione_m` | Posizione e precisione del GPS dal browser; senza fix nuovi da 4 s (al chiuso) la precisione si dichiara almeno 100 m |
+| `aggiornato_il` | Ora del telefono dell'ultimo invio |
+
+Il server la legge ogni secondo e la mette nel messaggio della diretta come `dal_vivo`:
+```json
+{"id": "boxi_sala", "lat": 41.89035, "lon": 12.5177, "precisione_m": 40.0, "ultimo_segnale_s": 0.7,
+ "stato": "critico", "p": 0.43, "paracadute": null}
+```
+`stato` è `nominale`, `attenzione` (da `dal_vivo.attenzione_da_m`), `critico` (da `dal_vivo.critico_da_m`) o `offline` (nessun segnale per `dal_vivo.offline_dopo_s`). Da critico o offline il server apre una richiesta con `veicolo_id: "boxi_sala"`, `assegnata: true` e `id` sopra 1.000.000, che si prende e si chiude come le altre. `/telefono/config.js` dà alla pagina indirizzo e chiave pubblicabile di Supabase dal file `.env`.
+
+`console/data/sede/strade.geojson` e `edifici.geojson` (da `data/scripts/08_area_sede.py`): strade e edifici con altezza `h` attorno alla sede dell'hackathon, per mostrare il BOXi in sala sulla mappa.
 

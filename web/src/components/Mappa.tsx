@@ -51,6 +51,8 @@ function rotazioneTouchpad(m: MLMap) {
   })
 }
 
+const SEDE: [number, number] = [12.51787, 41.89023] // Spazio Attivo Roma Casilina (config/scenario.yaml, sede)
+
 const C = {
   base: '#09090B',
   strada: '#2A2A30',
@@ -71,6 +73,7 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
   const div = useRef<HTMLDivElement>(null)
   const mappa = useRef<MLMap | null>(null)
   const sel = useRef(selezionato)
+  const volaDalVivo = useRef<() => void>(() => {})
   // i dati della giornata possono cambiare (temporale in anticipo): la mappa resta, cambia solo cosa legge
   const dati = useRef(sc)
   dati.current = sc
@@ -104,13 +107,19 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       // spazio occupato dai pannelli (coda a sinistra, schede a destra, giornata in basso): impostato una volta sola,
       // così centrare un veicolo non fa scivolare la vista animando i margini
       m.setPadding({ left: 360, right: 360, top: 0, bottom: 180 })
+      // la mappa arriva fino alla sede dell'hackathon (Casilina), dove il telefono fa da BOXi dal vivo
+      const limiti = new maplibregl.LngLatBounds(b.getSouthWest(), b.getNorthEast()).extend(SEDE)
       m.setMaxBounds([
-        [b.getWest() - 0.03, b.getSouth() - 0.02],
-        [b.getEast() + 0.03, b.getNorth() + 0.02],
+        [limiti.getWest() - 0.03, limiti.getSouth() - 0.02],
+        [limiti.getEast() + 0.03, limiti.getNorth() + 0.02],
       ])
 
       m.addSource('tratti', { type: 'geojson', data: sc.tratti, promoteId: 'seg_id' })
       m.addSource('edifici', { type: 'geojson', data: sc.edifici })
+      // strade ed edifici attorno alla sede (data/scripts/08_area_sede.py); se mancano la mappa resta com'è
+      m.addSource('sede-strade', { type: 'geojson', data: '/data/sede/strade.geojson' })
+      m.addSource('sede-edifici', { type: 'geojson', data: '/data/sede/edifici.geojson' })
+      m.addSource('dal-vivo', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       m.addSource('veicoli', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       m.addSource('percorso', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
 
@@ -155,6 +164,24 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
           'line-color': coloreRischio,
           'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 13, 1, 16, 3, 18, 8],
           'line-opacity': 0.95,
+        },
+      })
+      m.addLayer({
+        id: 'sede-strade',
+        type: 'line',
+        source: 'sede-strade',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': C.strada, 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 13, 0.6, 16, 2.4, 18, 7] },
+      })
+      m.addLayer({
+        id: 'sede-edifici',
+        type: 'fill-extrusion',
+        source: 'sede-edifici',
+        paint: {
+          'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'h'], 6, '#141418', 25, '#1D1D22', 45, '#2A2A31'],
+          'fill-extrusion-height': ['get', 'h'],
+          'fill-extrusion-opacity': 0.88,
+          'fill-extrusion-vertical-gradient': true,
         },
       })
       m.addLayer({
@@ -218,6 +245,21 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
         },
       })
       m.addLayer({
+        id: 'dal-vivo-precisione',
+        type: 'circle',
+        source: 'dal-vivo',
+        paint: {
+          'circle-radius': raggioMetri,
+          'circle-color': ['match', ['get', 'stato'], 'offline', C.offline, 'critico', C.critical, 'attenzione', C.warn, C.info],
+          'circle-opacity': 0.12,
+          'circle-stroke-color': ['match', ['get', 'stato'], 'offline', C.offline, 'critico', C.critical, 'attenzione', C.warn, C.info],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-opacity': 0.8,
+          'circle-pitch-alignment': 'map',
+          'circle-radius-transition': { duration: 600 },
+        },
+      })
+      m.addLayer({
         id: 'veicoli-selezione',
         type: 'circle',
         source: 'veicoli',
@@ -255,7 +297,41 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       let fascia = -1
       let giornata = sc
       let raf = 0
+      // il BOXi in sala: un marcatore con l'etichetta (le etichette della mappa vorrebbero font scaricati da internet)
+      const elemento = document.createElement('button')
+      elemento.className = 'boxi-sala'
+      elemento.innerHTML = '<span class="anello"></span><span class="punto"></span><span class="nome">BOXi in sala</span>'
+      elemento.onclick = (e) => {
+        e.stopPropagation()
+        onSeleziona('boxi_sala')
+      }
+      const marcatore = new maplibregl.Marker({ element: elemento })
+      let visto = false
+      const disegnaDalVivo = () => {
+        const d = orologio.dalVivo()
+        if (!d) {
+          marcatore.remove()
+          ;(m.getSource('dal-vivo') as GeoJSONSource).setData({ type: 'FeatureCollection', features: [] })
+          return
+        }
+        marcatore.setLngLat([d.lon, d.lat]).addTo(m)
+        elemento.dataset.stato = d.stato
+        ;(m.getSource('dal-vivo') as GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features: [{ type: 'Feature', properties: { g: d.precisione_m, stato: d.stato }, geometry: { type: 'Point', coordinates: [d.lon, d.lat] } }],
+        })
+        if (!visto) {
+          // la prima volta che il telefono si collega la mappa vola da lui
+          visto = true
+          m.flyTo({ center: [d.lon, d.lat], zoom: 16.5, pitch: 55, duration: 2500 })
+        }
+      }
+      volaDalVivo.current = () => {
+        const d = orologio.dalVivo()
+        if (d) m.flyTo({ center: [d.lon, d.lat], zoom: 16.5, pitch: 55, duration: 2000 })
+      }
       const disegna = () => {
+        disegnaDalVivo()
         const sc = dati.current
         const t = orologio.ora()
         const f = indiceFascia(sc, t)
@@ -295,6 +371,16 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
 
     return () => m.remove()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tasto B: la mappa torna sul BOXi in sala
+  useEffect(() => {
+    const tasto = (e: KeyboardEvent) => {
+      if (e.code === 'KeyB' && !e.shiftKey && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA')
+        volaDalVivo.current()
+    }
+    window.addEventListener('keydown', tasto)
+    return () => window.removeEventListener('keydown', tasto)
+  }, [])
 
   // Al cambio di selezione la camera va sul veicolo
   useEffect(() => {

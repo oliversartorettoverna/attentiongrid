@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090B" />
+    <title>BOXi in sala · AttentionGrid</title>
+    <!-- indirizzo e chiave pubblicabile di Supabase: generati dal server (/telefono/config.js), mai nel repository -->
+    <script src="config.js"></script>
+    <style>
+      :root {
+        --base: #09090b; --surface: #111113; --elevated: #18181b; --line: #232327; --muted: #71717a;
+        --secondary: #a1a1aa; --primary: #fafafa; --ok: #a3f24e; --warn: #ff8a3d; --critical: #ff3d6e; --info: #7b6cff;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--base); color: var(--primary);
+        font-family: ui-sans-serif, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      main { min-height: 100%; display: flex; flex-direction: column; padding: max(24px, env(safe-area-inset-top)) 20px 28px; gap: 20px; }
+      .eyebrow { font: 500 11px ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+      h1 { margin: 6px 0 0; font-size: 26px; font-weight: 600; letter-spacing: -.01em; }
+      .precisione { margin-top: 8px; padding: 28px 20px; border-radius: 20px; background: var(--surface);
+        box-shadow: inset 0 0 0 1px var(--line); text-align: center; }
+      .metri { font: 600 64px ui-monospace, monospace; letter-spacing: -.03em; line-height: 1; }
+      .metri small { font-size: 22px; color: var(--muted); margin-left: 4px; }
+      .stato { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 6px 14px; border-radius: 999px;
+        font-size: 14px; font-weight: 500; color: var(--secondary); box-shadow: inset 0 0 0 1px var(--line); }
+      .stato i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+      .righe { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: 14px; overflow: hidden; }
+      .righe div { background: var(--surface); padding: 12px 14px; }
+      .righe span { display: block; font-size: 11px; color: var(--muted); }
+      .righe b { font: 500 16px ui-monospace, monospace; }
+      button { margin-top: auto; height: 56px; border: 0; border-radius: 14px; font-size: 17px; font-weight: 600;
+        background: var(--primary); color: var(--base); }
+      button.ferma { background: transparent; color: var(--primary); box-shadow: inset 0 0 0 1px #34343a; }
+      .nota { font-size: 13px; line-height: 1.45; color: var(--muted); margin: 0; }
+      .errore { color: var(--critical); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <div class="eyebrow">AttentionGrid · flotta Poste</div>
+        <h1>BOXi in sala</h1>
+      </div>
+      <section class="precisione">
+        <div class="eyebrow">Precisione del GPS</div>
+        <div class="metri" id="metri">—<small>m</small></div>
+        <div class="stato" id="stato"><i></i><span>Non collegato</span></div>
+      </section>
+      <div class="righe">
+        <div><span>Posizioni inviate</span><b id="inviate">0</b></div>
+        <div><span>Ultimo invio</span><b id="ultimo">—</b></div>
+      </div>
+      <p class="nota" id="nota">Tieni lo schermo acceso e usa i dati mobili, non il wifi della sala. Al chiuso la precisione peggiora: è proprio quello che la console deve vedere.</p>
+      <button id="pulsante">Avvia il BOXi</button>
+    </main>
+    <script>
+      // Soglie come in config/scenario.yaml → dal_vivo: solo per l'etichetta qui, lo stato vero lo decide il server
+      const ATTENZIONE_M = 10, CRITICO_M = 25, SENZA_FIX_DOPO_S = 4
+      const $ = (id) => document.getElementById(id)
+      let ultimoFix = null, guardia = null, timer = null, wakeLock = null, inviate = 0, ultimoInvio = 0
+
+      function mostra(precisione, nota) {
+        $('metri').innerHTML = `${precisione >= 100 ? '>100' : Math.round(precisione)}<small>m</small>`
+        const [testo, colore] = precisione >= CRITICO_M ? ['Critico', 'var(--critical)'] : precisione >= ATTENZIONE_M ? ['Attenzione', 'var(--warn)'] : ['Nominale', 'var(--ok)']
+        $('stato').innerHTML = `<i style="background:${colore}"></i><span>${testo}${nota ? ' · ' + nota : ''}</span>`
+      }
+
+      async function invia(lat, lon, precisione) {
+        const corpo = { veicolo: 'boxi_sala', lat, lon, precisione_m: precisione, aggiornato_il: new Date().toISOString() }
+        try {
+          const r = await fetch(`${AG.supabaseUrl}/rest/v1/posizioni_live?on_conflict=veicolo`, {
+            method: 'POST',
+            headers: { apikey: AG.chiave, Authorization: `Bearer ${AG.chiave}`, 'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(corpo),
+          })
+          if (!r.ok) throw new Error(`Supabase ${r.status}`)
+          inviate++, ultimoInvio = Date.now()
+          $('inviate').textContent = inviate
+          $('nota').className = 'nota'
+        } catch (e) {
+          $('nota').textContent = `Invio non riuscito: ${e.message}. Controlla la connessione dati.`
+          $('nota').className = 'nota errore'
+        }
+      }
+
+      function avvia() {
+        if (!('geolocation' in navigator)) return alert('Questo browser non dà la posizione.')
+        $('pulsante').textContent = 'Ferma'
+        $('pulsante').className = 'ferma'
+        navigator.wakeLock?.request('screen').then((w) => (wakeLock = w), () => {})
+        guardia = navigator.geolocation.watchPosition(
+          (pos) => {
+            ultimoFix = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy, quando: Date.now() }
+            mostra(ultimoFix.acc)
+          },
+          (err) => { $('nota').textContent = `GPS: ${err.message}`; $('nota').className = 'nota errore' },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+        )
+        // ogni secondo si manda l'ultima posizione; senza fix nuovi (al chiuso) la precisione si dichiara pessima
+        timer = setInterval(() => {
+          if (!ultimoFix) return
+          const vecchio = (Date.now() - ultimoFix.quando) / 1000 > SENZA_FIX_DOPO_S
+          const precisione = vecchio ? Math.max(ultimoFix.acc, 100) : ultimoFix.acc
+          if (vecchio) mostra(precisione, 'nessun fix')
+          invia(ultimoFix.lat, ultimoFix.lon, Math.round(precisione * 10) / 10)
+          $('ultimo').textContent = ultimoInvio ? `${Math.round((Date.now() - ultimoInvio) / 1000)} s fa` : '—'
+        }, 1000)
+      }
+
+      function ferma() {
+        navigator.geolocation.clearWatch(guardia)
+        clearInterval(timer)
+        wakeLock?.release()
+        $('pulsante').textContent = 'Avvia il BOXi'
+        $('pulsante').className = ''
+        $('stato').innerHTML = '<i></i><span>Fermo: la console lo vedrà offline tra pochi secondi</span>'
+      }
+
+      $('pulsante').onclick = () => (timer ? (ferma(), (timer = null)) : avvia())
+      if (!window.AG?.chiave) $('nota').textContent = 'Manca config.js: apri questa pagina dal server di AttentionGrid.'
+    </script>
+  </body>
+</html>

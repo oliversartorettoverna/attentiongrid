@@ -19,6 +19,8 @@ PREFISSI = {"boxi": "BX", "corriere_a": "CA", "corriere_b": "CB", "navette": "NV
 
 def sigla(veicolo_id: str) -> str:
     """Il nome breve del veicolo, come in console: boxi_07 → BX-07, navette_104 → NV-104."""
+    if veicolo_id == "boxi_sala":
+        return "BOXi in sala"
     flotta, _, numero = veicolo_id.rpartition("_")
     return f"{PREFISSI.get(flotta, flotta[:2].upper())}-{numero}"
 

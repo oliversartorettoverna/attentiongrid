@@ -129,3 +129,16 @@ gps:                            # precisione del GPS stimata per strada e stato 
   degradato_da_m: 10            # da questa precisione il GPS è "degradato" (circa il 10% delle strade)
   contributo_degradato: 0.15    # probabilità di richiesta in più mentre il GPS è degradato
   contributo_assente: 0.30      # ... e nei sottopassi, dove il segnale si perde
+
+sede:                           # la sede dell'hackathon, dove il telefono fa da BOXi dal vivo (data/scripts/08_area_sede.py)
+  nome: "Spazio Attivo Roma Casilina"
+  punto: [41.89023, 12.51787]   # Via Casilina 3T (geocodifica OpenStreetMap)
+  raggio_m: 600                 # area di strade ed edifici scaricata attorno alla sede
+
+dal_vivo:                       # il telefono che fa da BOXi in sala (server/dal_vivo.py, telefono/index.html)
+  probabilita_base: 0.05        # come un veicolo nominale: score 95 con il GPS buono
+  attenzione_da_m: 10           # da questa precisione il GPS è degradato: +15% di probabilità (gps.contributo_degradato)
+  critico_da_m: 25              # da questa precisione (o senza fix, al chiuso) è quasi perso...
+  contributo_critico: 0.40      # ...e la probabilità sale del 40%: score sotto 65, rosso
+  offline_dopo_s: 5             # senza segnali per tanto tempo il veicolo è offline, collegamento perso
+  lettura_ogni_s: 1             # ogni quanto il server legge la posizione da Supabase
