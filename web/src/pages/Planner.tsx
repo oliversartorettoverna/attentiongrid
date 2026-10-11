@@ -4,6 +4,7 @@ import { Check, CloudLightning, ShieldCheck } from 'lucide-react'
 import { useScenario } from '../lib/ScenarioContext'
 import type { Piani, PianoVerificato } from '../lib/scenario'
 import { Pagina, Riquadro, Titolo } from '../components/Pagina'
+import { WhatIf } from '../components/WhatIf'
 
 // I tre piani da tools/prova_pianificazione.py (piani.json): fatti sulla previsione del giorno prima e
 // verificati sulla giornata vera, anche quando il temporale non arriva all'ora prevista.
@@ -69,6 +70,8 @@ export function Planner() {
           <Scheda key={x.chiave} piano={x} b={c.piani[x.chiave]} attivo={x.chiave === scelto} obiettivo={obiettivo} indice={i} onClick={() => setScelto(x.chiave)} />
         ))}
       </div>
+
+      <WhatIf />
 
       <Riquadro titolo={`Richieste prese entro ${pn.attesa_max_s} s, ora per ora`} destra={<Legenda obiettivo={obiettivo} />}>
         <div className="mt-4 grid gap-1.5" style={{ gridTemplateColumns: `128px repeat(${pn.ore.length}, minmax(0, 1fr))` }}>
