@@ -1,9 +1,23 @@
-# Parametri economici: gli stessi del foglio "Modello – costi, prezzo e mercato" nel Drive (scheda Ipotesi e Servizio completo).
+# Parametri economici: gli stessi del foglio "Modello – costi, prezzo e mercato" nel Drive (scheda Ipotesi e Flotte e prezzi).
 # Se cambiano lì, vanno cambiati qui. Stato di ogni numero: docs/ipotesi.md.
 
-paese: "Germania"
-stipendio_lordo_annuo: 45000      # gehalt.de: Leitstellendisponent circa 3.710 €/mese; StepStone circa 42.300 €/anno
-costo_azienda_su_lordo: 1.21      # contributi a carico dell'azienda
+paese: germania                   # paese dei costi in kpi.json, come nel foglio; gli altri si ricavano col rapporto dei costi orari
+paesi:
+  germania:
+    nome: Germania
+    stipendio_lordo_annuo: 45000  # gehalt.de: Leitstellendisponent circa 3.710 €/mese; StepStone circa 42.300 €/anno
+    costo_azienda_su_lordo: 1.21  # contributi a carico dell'azienda
+  italia:
+    nome: Italia
+    stipendio_lordo_annuo: 25000  # Indeed: addetto centrale operativa vigilanza Roma circa 20.600 €; operatore call center circa 24.600 €
+    costo_azienda_su_lordo: 1.37  # contributi e TFR (calcolocostodipendente.it)
 persone_per_postazione_24h: 5     # Call Centre Helper: tra 4,2 e 5,4 per coprire una postazione 24 ore su 24
 costi_extra: 0.15                 # capiturno, formazione, sala
-prezzo_servizio_mese: 2500        # canone per veicolo al mese, Germania (da validare)
+
+# Servizio a ore: ogni flotta paga le ore in cui i suoi veicoli sono in strada
+prezzo_ora:
+  diurna: 8                       # € per ora di servizio, veicoli in strada meno di 12 ore al giorno (da validare nelle interviste)
+  estesa: 5                       # € per ora di servizio, 12 ore o più al giorno (pensato per il cliente àncora)
+fascia_estesa_da_ore: 12
+licenza_veicolo_mese: 200         # licenza software per chi tiene la sua centrale
+costi_nascosti: 0.23              # una centrale propria costa di più delle sole ore operatore: riserve, responsabile, locali (stima)

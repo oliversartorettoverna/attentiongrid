@@ -235,11 +235,17 @@ def precisione_gps(tratto: dict, cfg_gps: dict | None) -> dict:
     return {"gps_m": round(metri, 1)}
 
 
-def costo_ora_operatore(eco: dict) -> float:
+def costo_ora_operatore(eco: dict, paese: str | None = None) -> float:
     """Costo di un'ora di postazione presidiata: come nel foglio del business model, una postazione
-    24 ore su 24 richiede `persone_per_postazione_24h` persone."""
-    annuo = eco["stipendio_lordo_annuo"] * eco["costo_azienda_su_lordo"] * eco["persone_per_postazione_24h"]
+    24 ore su 24 richiede `persone_per_postazione_24h` persone. Senza paese, quello di riferimento."""
+    p = eco["paesi"][paese or eco["paese"]]
+    annuo = p["stipendio_lordo_annuo"] * p["costo_azienda_su_lordo"] * eco["persone_per_postazione_24h"]
     return annuo * (1 + eco["costi_extra"]) / (365 * 24)
+
+
+def fascia_prezzo(eco: dict, ore_al_giorno: float) -> str:
+    """Fascia del servizio a ore: estesa per i veicoli in strada almeno `fascia_estesa_da_ore` al giorno."""
+    return "estesa" if ore_al_giorno >= eco["fascia_estesa_da_ore"] else "diurna"
 
 
 def scrivi_registro(percorso, eventi, lista_passate, rischio, fascia, nomi, giri, cfg_flotte):
@@ -356,6 +362,14 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     if economia_path and Path(economia_path).exists():
         eco = yaml.safe_load(open(economia_path, encoding="utf-8"))
     euro_ora = costo_ora_operatore(eco) if eco else None
+    ore_servizio = {}
+    for x in giri:
+        ore_servizio[x["flotta"]] = ore_servizio.get(x["flotta"], 0.0) + \
+            sum(b - a for a, b in intervalli_servizio(x)) / 3600
+    n_per_flotta = {f: sum(1 for x in giri if x["flotta"] == f) for f in ore_servizio}
+    # Ricavi del servizio a ore in un giorno: ogni flotta paga le sue ore al prezzo della sua fascia
+    ricavo_giorno = sum(h * eco["prezzo_ora"][fascia_prezzo(eco, h / n_per_flotta[f])]
+                        for f, h in ore_servizio.items()) if eco else None
 
     def blocco(eventi, piano, attivi):
         attese = [e["attesa_s"] for e in eventi] or [0]
@@ -374,7 +388,7 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
         if euro_ora:
             costo = ore_op * euro_ora * 365 / 12 / n_veicoli
             b["costo_veicolo_mese"] = round(costo)
-            b["margine_pct"] = round(100 * (1 - costo / eco["prezzo_servizio_mese"]))
+            b["margine_pct"] = round(100 * (1 - ore_op * euro_ora / ricavo_giorno))
         return b
 
     parita = {"senza": blocco(ev_picco, picco_costante, attivi_senza),
@@ -396,10 +410,6 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     # 4b. Per flotta: il lavoro che ogni flotta dà agli operatori (richieste attese × durata), ora per ora,
     # divide gli operatori della centrale; da qui ore operatore, veicoli per operatore e costo di ogni flotta
     per_flotta = {}
-    ore_servizio = {}
-    for x in giri:
-        ore_servizio[x["flotta"]] = ore_servizio.get(x["flotta"], 0.0) + \
-            sum(b - a for a, b in intervalli_servizio(x)) / 3600
     curve_f = {f: np.array(curva_richieste([q for q in pas_con if q.flotta == f], rischio, inizio_s, fine_s, fascia))
                for f in sorted(flotte)}
     attivi_f = {f: veicoli_attivi([x for x in giri if x["flotta"] == f], sposta, inizio_s, n_min) for f in curve_f}
@@ -431,6 +441,9 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
         if euro_ora:
             d["costo_veicolo_mese"] = round(ore_op_f * euro_ora * 365 / 12 / n_f)
             d["costo_ora_servizio"] = round(ore_op_f * euro_ora / ore_servizio[f], 2)
+            d["fascia"] = fascia_prezzo(eco, ore_v)
+            # come nel foglio del business model: ore al giorno arrotondate a una cifra, quelle mostrate al cliente
+            d["prezzo_veicolo_mese"] = round(round(ore_v, 1) * eco["prezzo_ora"][d["fascia"]] * 365 / 12)
         per_flotta[f] = d
 
     # 5. Griglia dell'attenzione
@@ -458,8 +471,12 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     scrivi("rigioco.json", {"senza": ev_senza, "con": ev_con})
     scrivi("kpi.json", {"senza": kpi_senza, "con": kpi_con, "parita_servizio": parita, "orario": orario,
                         "per_flotta": per_flotta,
-                        "economia": ({"paese": eco["paese"], "costo_ora_postazione": round(euro_ora, 2),
-                                      "prezzo_servizio_mese": eco["prezzo_servizio_mese"]} if eco else None),
+                        "economia": ({"paese": eco["paese"],
+                                      "paesi": {k: {"nome": v["nome"], "costo_ora_postazione": round(costo_ora_operatore(eco, k), 2)}
+                                                for k, v in eco["paesi"].items()},
+                                      "prezzo_ora": eco["prezzo_ora"], "fascia_estesa_da_ore": eco["fascia_estesa_da_ore"],
+                                      "licenza_veicolo_mese": eco["licenza_veicolo_mese"],
+                                      "costi_nascosti": eco["costi_nascosti"]} if eco else None),
                         "spostamenti_min": sposta})
     geometrie = {}
     gj = json.load(open(tratti_path, encoding="utf-8"))
