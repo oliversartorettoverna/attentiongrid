@@ -62,6 +62,9 @@ export interface Piani {
   casi: { chiave: 'previsto' | 'prima' | 'dopo'; nome: string; piani: Record<'fissi' | 'normale' | 'prudente', PianoVerificato> }[]
 }
 
+/** Ogni flotta con una centrale tutta sua (tools/flotta_da_sola.py): ore operatore al giorno. */
+export type DaSola = Record<string, { veicoli: number; ore_servizio_per_veicolo: number; ore_operatore: { turni_fissi: number; piano: number } }>
+
 export interface Scenario {
   data: string
   flotte: Record<string, { nome: string; veicoli: number }>
@@ -91,6 +94,7 @@ export interface Scenario {
   }
   kpi: any
   piani: Piani | null // da tools/prova_pianificazione.py; può mancare
+  daSola: DaSola | null // da tools/flotta_da_sola.py; può mancare
   tratti: GeoJSON.FeatureCollection
   edifici: GeoJSON.FeatureCollection
   nomiVie: Map<string, string>
@@ -130,6 +134,7 @@ export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
     passate: v.passate ?? [],
   }))
   const piani = await leggi('piani.json').catch(() => null) // i piani verificati valgono per ogni giornata
+  const daSola = await leggi('da_sola.json').catch(() => null)
   const nomiVie = new Map<string, string>()
   for (const f of tratti.features) nomiVie.set(f.properties.seg_id, f.properties.nome || '')
   return {
@@ -155,6 +160,7 @@ export async function caricaScenario(cartella = 'scenario'): Promise<Scenario> {
     carico: { orari: carico.orari, ...carico.con },
     kpi,
     piani,
+    daSola,
     tratti,
     edifici,
     nomiVie,

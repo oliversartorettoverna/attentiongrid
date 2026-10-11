@@ -117,9 +117,16 @@ Quello che l'app legge (tramite `server/`). `console/data/esempio/` ha i dati fi
 ```
 Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori_medi`, `operatori_necessari_al_picco`. `veicoli_fermi_oltre_60s` conta le **richieste** (blocchi) che hanno aspettato più di 60 s, non i veicoli distinti.
 
-`parita_servizio` confronta i piani **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno tutto il giorno gli operatori necessari al picco non previsto; `senza_turni` copre ogni turno fisso per il suo picco; `solo_turni` è il piano normale dalla previsione, senza sfasare le partenze; `con` è il piano prudente con le partenze sfasate. Ogni blocco ha `operatori_medi`, `ore_operatore`, `ore_veicolo`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`, `ora_peggiore_entro_attesa_max_pct` e, se c'è `config/economia.yaml`, `costo_veicolo_mese` e `margine_pct`. I blocchi `senza`/`con` in cima restano il rigioco con `operatori_senza_sistema` fissi.
+`parita_servizio` confronta i piani **a parità di livello di servizio** (è il numero del pitch): `senza` tiene in turno tutto il giorno gli operatori necessari al picco non previsto; `senza_turni` copre ogni turno fisso per il suo picco; `solo_turni` è il piano normale dalla previsione, senza sfasare le partenze; `con` è il piano prudente con le partenze sfasate. Ogni blocco ha `operatori_medi`, `ore_operatore`, `ore_veicolo`, `veicoli_per_operatore`, `attesa_media_s`, `entro_attesa_max_pct`, `ora_peggiore_entro_attesa_max_pct` e, se c'è `config/economia.yaml`, `costo_veicolo_mese` e `margine_pct` (margine sui ricavi del servizio a ore: ogni flotta paga le sue ore di servizio al prezzo della sua fascia). I blocchi `senza`/`con` in cima restano il rigioco con `operatori_senza_sistema` fissi.
 
-`orario`: una riga per ora con veicoli in servizio, operatori (`operatori_senza`, `operatori_turni`, `operatori_con`) e veicoli per operatore. `per_flotta`: per ogni flotta veicoli, ore di servizio, richieste per veicolo, quota di tempo in assistenza, ore operatore attribuite (in proporzione al lavoro dato agli operatori), veicoli per operatore, costo per veicolo al mese e per ora di servizio, e il dettaglio ora per ora. `economia`: paese, costo orario di una postazione e canone mensile usati per i costi.
+`orario`: una riga per ora con veicoli in servizio, operatori (`operatori_senza`, `operatori_turni`, `operatori_con`) e veicoli per operatore. `per_flotta`: per ogni flotta veicoli, ore di servizio, richieste per veicolo, quota di tempo in assistenza, ore operatore attribuite (in proporzione al lavoro dato agli operatori), veicoli per operatore, costo per veicolo al mese e per ora di servizio, fascia di prezzo (`fascia`: `diurna` o `estesa`), prezzo per veicolo al mese (`prezzo_veicolo_mese`) e il dettaglio ora per ora. I costi in `parita_servizio` e `per_flotta` sono nel paese di riferimento (`economia.paese`); per un altro paese si moltiplicano per il rapporto tra i costi orari, perché il costo è ore operatore × costo orario.
+
+`economia`: il paese di riferimento, il costo orario di una postazione per ogni paese, i prezzi del servizio e della licenza.
+```json
+{"paese": "germania",
+ "paesi": {"germania": {"nome": "Germania", "costo_ora_postazione": 35.74}, "italia": {"nome": "Italia", "costo_ora_postazione": 22.48}},
+ "prezzo_ora": {"diurna": 8, "estesa": 5}, "fascia_estesa_da_ore": 12, "licenza_veicolo_mese": 200, "costi_nascosti": 0.23}
+```
 
 `rischio_console.json`: il rischio di ogni tratto per fascia, per colorare le strade, e la data dello scenario (`data`). `p_millesimi` è `p_intervento × 1000` arrotondato (per tenere il file piccolo); `pioggia_mm` è la pioggia dell'ora di ogni fascia, `null` se manca `meteo.csv`.
 ```json
@@ -158,6 +165,11 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
                                  "operatori": [3, 4], "entro_pct_ora": [100, null]}}}]}
 ```
 Le chiavi dei casi sono `previsto`, `prima` e `dopo`; quelle dei piani `fissi`, `normale` e `prudente`.
+
+`da_sola.json` (da `tools/flotta_da_sola.py`, circa un minuto): ogni flotta con una centrale tutta sua, senza le altre. È l'alternativa del cliente al servizio. Per ogni flotta le ore operatore al giorno con i turni fissi sul picco di ogni turno (`turni_fissi`) e con il nostro piano prudente (`piano`), più veicoli e ore di servizio per veicolo. Il costo si ricava come per `kpi.json`: ore × costo orario del paese × 365 / 12 / veicoli.
+```json
+{"boxi": {"veicoli": 50, "ore_servizio_per_veicolo": 3.3, "ore_operatore": {"turni_fissi": 146.0, "piano": 50.0}}}
+```
 
 `tratti.geojson`: copia di `data/processed/tratti.geojson` ridotta ai campi `seg_id` e `nome` (serve per disegnare le strade senza bisogno di internet), più `gps_m`, la precisione del GPS stimata sul tratto in metri (dal rapporto canyon, parametri in `config/scenario.yaml` → `gps`), e `senza_gps: true` nei sottopassi, dove il segnale si perde (`gps_m` è `null`).
 

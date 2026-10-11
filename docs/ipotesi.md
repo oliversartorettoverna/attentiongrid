@@ -59,15 +59,22 @@ Gli stessi del foglio "Modello – costi, prezzo e mercato" nel Drive; valori in
 
 | Parametro | Valore | Stato | Fonte |
 |---|---|---|---|
-| Paese di riferimento | Germania | scelta | Come nel foglio del modello di business nel Drive |
-| Stipendio lordo annuo di un operatore | 45.000 € | validato | gehalt.de (Leitstellendisponent, circa 3.710 €/mese); StepStone circa 42.300 €/anno |
-| Costo azienda sul lordo | ×1,21 | stima | Contributi a carico del datore di lavoro |
+| Paese di riferimento | Germania | scelta | Come nel foglio del modello di business nel Drive: i costi in `kpi.json` sono tedeschi |
+| Stipendio lordo annuo di un operatore, Germania | 45.000 € | validato | gehalt.de (Leitstellendisponent, circa 3.710 €/mese); StepStone circa 42.300 €/anno |
+| Costo azienda sul lordo, Germania | ×1,21 | stima | Contributi a carico del datore di lavoro |
+| Stipendio lordo annuo di un operatore, Italia | 25.000 € | stima | Indeed: addetto centrale operativa vigilanza Roma circa 20.600 €; operatore call center circa 24.600 € |
+| Costo azienda sul lordo, Italia | ×1,37 | stima | Contributi e TFR (calcolocostodipendente.it) |
 | Persone per una postazione 24 ore su 24 | 5 | validato | Call Centre Helper (4,2–5,4) |
 | Costi extra | +15% | stima | Capiturno, formazione, sala |
-| Costo di un'ora di postazione | 35,74 € | calcolato | 45.000 × 1,21 × 5 × 1,15 / 8.760 ore |
-| Canone per veicolo al mese | 2.500 € | da validare | Prezzo del servizio completo, Germania |
+| Costo di un'ora di postazione | 35,74 € in Germania, 22,48 € in Italia | calcolato | stipendio × costo azienda × 5 × 1,15 / 8.760 ore |
+| Prezzo del servizio, fascia diurna | 8 € per ora di servizio | da validare nelle interviste | Veicoli in strada meno di 12 ore al giorno (BOXi, corrieri) |
+| Prezzo del servizio, fascia estesa | 5 € per ora di servizio | scelta | 12 ore o più al giorno; pensato per il cliente àncora (navette) |
+| Licenza software | 200 € per veicolo al mese | scelta | Per chi tiene la sua centrale |
+| Costi nascosti di una centrale propria | +23% sulle ore operatore | stima | Riserve per ferie e malattie, responsabile, locali, supervisore tecnico richiesto in Germania |
 
-Il costo per veicolo al mese di ogni piano è ore operatore × 35,74 € × 365 / 12, diviso per i 150 veicoli. Per un cliente italiano come Poste va rifatto con lo stipendio italiano.
+Il costo per veicolo al mese di ogni piano è ore operatore × costo orario × 365 / 12, diviso per i veicoli; per passare da un paese all'altro basta il rapporto tra i costi orari. Il prezzo è ore di servizio al giorno (arrotondate a una cifra, come nel foglio) × prezzo della fascia × 365 / 12: per i BOXi 3,3 × 8 € × 30,4 = 803 € al mese. L'alternativa del cliente è la sua centrale da sola (`tools/flotta_da_sola.py`): a turni fissi sul picco, oppure con il nostro piano più la licenza.
+
+In Italia il lavoro costa il 37% in meno, e allo stesso modo la centrale propria del cliente; il prezzo per ora invece è lo stesso. Con 8 € l'ora i BOXi in Italia risparmiano il 9% contro la loro centrale con la licenza (23% contando i costi nascosti), contro il 38% (48%) in Germania. Un prezzo italiano per ora non è ancora stato scelto.
 
 ## Rischio di intervento
 
