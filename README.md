@@ -119,5 +119,6 @@ Per la vecchia console statica: `python tools/genera_esempio.py` rigenera i file
 | Robustezza del piano (`tools/prova_pianificazione.py`) | con il temporale un'ora prima o dopo il previsto il piano prudente tiene il 94% entro 20 s nell'ora peggiore; il piano normale scende al 34% e al 3% |
 | Griglia dell'attenzione (`engine/attenzione.py`, soglie con `tools/soglie.py`) | l'86% delle richieste arriva da un veicolo che due minuti prima era giallo o rosso (36% rosso); i veicoli sono rossi il 15% del tempo e un rosso chiede aiuto 6,5 volte più di un verde |
 | Sensibilità (`tools/sensibilita.py`) | con il piano prudente vero: risparmio di ore 59% nel caso di riferimento, tra 56% e 65% con un peso alla volta a ±50%, tra 49% e 67% con tutti i pesi insieme, tra 58% e 62% con durata degli interventi e attesa massima a ±50% |
+| GPS in diretta | precisione stimata per strada dal canyon urbano: il 10% delle strade e i 9 sottopassi mettono il veicolo in modalità degradata, con cerchio di incertezza e score più basso |
 | Edifici 3D (`07`) | 5.598 edifici con altezza: 89% da satellite, 8% da OSM, 2% di riserva |
 | App (`web/`, `server/`) | cinque schermate sui dati del motore, mappa 3D che funziona senza internet |

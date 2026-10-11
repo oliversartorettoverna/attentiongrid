@@ -121,3 +121,11 @@ copilota:                       # copilota AI nella scheda intervento (server/co
   modello: claude-opus-5-5
   effort: low                   # risposta in pochi secondi: deve stare dentro i 20 s dell'intervento
   attesa_max_s: 8               # oltre questo tempo si usa il ripiego costruito dai dati del motore
+
+gps:                            # precisione del GPS stimata per strada e stato del GPS in diretta (stima, vedi docs/ipotesi.md)
+  precisione_base_m: 3          # a cielo aperto
+  metri_per_punto_canyon: 5     # in più per ogni punto di rapporto canyon (altezza / distanza tra le facciate)...
+  canyon_da: 0.5                # ...oltre questo rapporto
+  degradato_da_m: 10            # da questa precisione il GPS è "degradato" (circa il 10% delle strade)
+  contributo_degradato: 0.15    # probabilità di richiesta in più mentre il GPS è degradato
+  contributo_assente: 0.30      # ... e nei sottopassi, dove il segnale si perde

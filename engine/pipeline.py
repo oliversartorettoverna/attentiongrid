@@ -223,6 +223,18 @@ def rischio_console(rischio: dict, rischio_path, inizio_s: int, fine_s: int, fas
     return {"data": data, "fasce": fasce, "pioggia_mm": pioggia, "p_millesimi": p}
 
 
+def precisione_gps(tratto: dict, cfg_gps: dict | None) -> dict:
+    """Precisione del GPS stimata sul tratto, in metri: peggiora con il rapporto canyon (palazzi alti, via
+    stretta); nei sottopassi il segnale si perde. Serve alla console per lo stato del GPS in diretta."""
+    if not cfg_gps:
+        return {}
+    if str(tratto.get("sottopasso")).lower() in ("true", "1"):
+        return {"gps_m": None, "senza_gps": True}
+    canyon = float(tratto.get("rapporto_canyon") or 0)
+    metri = cfg_gps["precisione_base_m"] + cfg_gps["metri_per_punto_canyon"] * max(0.0, canyon - cfg_gps["canyon_da"])
+    return {"gps_m": round(metri, 1)}
+
+
 def costo_ora_operatore(eco: dict) -> float:
     """Costo di un'ora di postazione presidiata: come nel foglio del business model, una postazione
     24 ore su 24 richiede `persone_per_postazione_24h` persone."""
@@ -453,14 +465,15 @@ def esegui(giri_path, rischio_path, tratti_path, out_dir, config_path, flotte=No
     gj = json.load(open(tratti_path, encoding="utf-8"))
     for ft in gj["features"]:
         geometrie[int(ft["properties"]["seg_id"].split("_")[1])] = LineString(ft["geometry"]["coordinates"])
-        ft["properties"] = {"seg_id": ft["properties"]["seg_id"], "nome": ft["properties"].get("nome", "")}
+        ft["properties"] = {"seg_id": ft["properties"]["seg_id"], "nome": ft["properties"].get("nome", ""),
+                            **precisione_gps(ft["properties"], cfg.get("gps"))}
     scrivi("veicoli.json", {"passo_s": PASSO_ANIMAZIONE_S,
                             "flotte": {k: {"nome": cfg_flotte.get(k, {}).get("nome", k),
                                            "veicoli": sum(1 for x in giri if x["flotta"] == k)} for k in sorted(flotte)},
                             "spostamenti_s": {k: v * 60 for k, v in sposta.items() if v},
                             "veicoli": percorsi_animazione(giri, geometrie)})
     scrivi("tratti.geojson", gj)
-    scrivi("attenzione.json", attenzione.serializza_compatto(stati, inizio_s, at, valid))
+    scrivi("attenzione.json", attenzione.serializza_compatto(stati, inizio_s, at, valid, cfg_gps=cfg.get("gps")))
     scrivi("rischio_console.json", rischio_console(reale, rischio_path, inizio_s, fine_s, fascia,
                                                    str(g.get("data", ""))))
     scrivi_registro(out / "registro_interventi.csv", ev_con, pas_con, reale, fascia, nomi, giri, cfg_flotte)

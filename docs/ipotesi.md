@@ -164,6 +164,20 @@ Il piano prudente rifà il piano con il temporale anticipato e ritardato di un'o
 
 Alla postazione 3 il motore assegna circa una richiesta al minuto nell'ora del temporale: un ritmo da seguire a velocità 1×.
 
+## GPS in diretta
+
+Ogni tratto ha una precisione del GPS stimata dal rapporto canyon (altezza dei palazzi / distanza tra le facciate, misurato con Copernicus e OSM). In console un veicolo prende la precisione della strada che sta percorrendo: è lo stato che una flotta vera riporta dal veicolo, e che il BOXi-telefono manderà misurato dal browser.
+
+| Parametro | Valore | Stato |
+|---|---|---|
+| Precisione a cielo aperto | 3 m | stima (GNSS per auto: 2–5 m) |
+| Peggioramento con il canyon | +5 m per ogni punto di rapporto oltre 0,5 (circa 10 m con rapporto 2, 15 m nei vicoli più stretti) | stima |
+| GPS degradato | da 10 m: 180 tratti su 1.769, circa il 10% | scelta |
+| Segnale assente | nei 9 sottopassi | stima |
+| Effetto sullo score mentre il GPS è degradato | +15% di probabilità di richiesta (+30% senza segnale), come una causa in più | scelta |
+
+Nel rischio previsto il motore tiene già un piccolo contributo per il GPS in canyon (0,005 per tratto): quello è la previsione, questo è lo stato del momento. Nella giornata della centrale ci sono in ogni momento 5–6 veicoli con il GPS degradato su 80–90 in strada.
+
 ## Copilota AI
 
 | Parametro | Valore | Stato | Dove |

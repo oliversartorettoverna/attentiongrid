@@ -65,7 +65,7 @@ async def suggerimento(richiesta_id: int, dati: dict = Body(default={})):
             if r["via"] == via and r["inizio_piano"] < aperta["inizio_piano"]]
     confermate = [r["causa"] for r in registro.della_giornata(g.temporale) if r["via"] == via]
     ctx = {"veicolo": sigla(aperta["veicolo_id"]), "flotta": NOME_FLOTTA.get(aperta["veicolo_id"], ""), "via": via,
-           "motivo_previsto": aperta["motivo_previsto"], "score": dati.get("score"), "pioggia_mm": dati.get("pioggia_mm"),
+           "motivo_previsto": aperta["motivo_previsto"], "score": dati.get("score"), "pioggia_mm": dati.get("pioggia_mm"), "gps": dati.get("gps"),
            "ora": f"{int(g.t) // 3600:02d}:{int(g.t) % 3600 // 60:02d}", "secondi_di_attesa": round(g.t - aperta["inizio"]),
            "richieste_oggi_sulla_via": len(oggi), "cause_confermate_oggi_sulla_via": confermate[-5:]}
     return await copilota.suggerisci((g.temporale, richiesta_id), ctx)

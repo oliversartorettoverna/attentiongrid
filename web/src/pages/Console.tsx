@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Siren, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Check, CornerDownLeft, Navigation, OctagonX, Play, Satellite, Siren, Sparkles, X } from 'lucide-react'
 import { Mappa } from '../components/Mappa'
 import { LineaGiornata } from '../components/LineaGiornata'
 import { Stato, coloreLivello } from '../components/Stato'
@@ -15,6 +15,9 @@ import {
   posizione,
   score,
   sigla,
+  statoGps,
+  testoGps,
+  type StatoGps,
   type Livello,
   type Scenario,
 } from '../lib/scenario'
@@ -224,47 +227,46 @@ function ColonnaDestra({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | n
   const aperta = sel ? richieste.find((r) => r.veicolo_id === sel) : undefined
   return (
     <div className="absolute top-4 right-4 flex max-h-[calc(100%-200px)] w-[340px] flex-col gap-3">
-      <AnimatePresence mode="popLayout">
+      {/* la scheda vecchia esce prima che entri la nuova: niente schede sovrapposte passando da un veicolo all'altro */}
+      <AnimatePresence mode="wait" initial={false}>
         {sel && aperta && <SchedaIntervento key={`i-${aperta.id}`} sc={sc} r={apri(aperta, t)} t={t} onChiudi={() => onSeleziona(null)} />}
         {sel && !aperta && <SchedaVeicolo key={sel} sc={sc} id={sel} t={t} onChiudi={() => onSeleziona(null)} />}
       </AnimatePresence>
-      {!(sel && aperta) && (
-        <motion.section {...entrata(1)} layout className="glass flex min-h-0 flex-col rounded-2xl">
-          <header className="flex items-center justify-between px-4 pt-4 pb-3">
-            <div>
-              <div className="eyebrow">Da tenere d'occhio</div>
-              <div className="mt-1 text-xs text-muted">entrano in una via a rischio nei prossimi {sc.soglie.orizzonte_min} min</div>
-            </div>
-          </header>
-          <div className="min-h-0 overflow-y-auto px-2 pb-2">
-            {daGuardare.length === 0 && <div className="px-2 py-6 text-center text-sm text-muted">Tutti i veicoli sono nominali.</div>}
-            {daGuardare.map((d) => (
-              <motion.button
-                layout
-                key={d.id}
-                onClick={() => onSeleziona(d.id)}
-                className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-elevated ${sel === d.id ? 'bg-elevated ring-1 ring-info/60' : ''}`}
-              >
-                <div className="w-11 shrink-0">
-                  <div className="num text-lg leading-none font-medium" style={{ color: coloreLivello(d.livello) }}>
-                    {score(d.p)}
-                  </div>
-                  <div className="mt-1 text-[10px] text-muted">score</div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="num text-[13px] font-medium">{sigla(d.id)}</span>
-                    {d.tra_s >= 0 && <span className="num text-[11px] text-muted">tra {d.tra_s} s</span>}
-                  </div>
-                  <div className="truncate text-xs text-secondary">{d.via || sc.flotte[sc.perId.get(d.id)?.flotta ?? '']?.nome}</div>
-                  <div className="truncate text-[11px] text-muted">{d.motivo}</div>
-                </div>
-                <Stato livello={d.livello} />
-              </motion.button>
-            ))}
+      <motion.section {...entrata(1)} className={`glass min-h-0 flex-col rounded-2xl ${sel && aperta ? 'hidden' : 'flex'}`}>
+        <header className="flex items-center justify-between px-4 pt-4 pb-3">
+          <div>
+            <div className="eyebrow">Da tenere d'occhio</div>
+            <div className="mt-1 text-xs text-muted">entrano in una via a rischio nei prossimi {sc.soglie.orizzonte_min} min</div>
           </div>
-        </motion.section>
-      )}
+        </header>
+        <div className="min-h-0 overflow-y-auto px-2 pb-2">
+          {daGuardare.length === 0 && <div className="px-2 py-6 text-center text-sm text-muted">Tutti i veicoli sono nominali.</div>}
+          {daGuardare.map((d) => (
+            <motion.button
+              layout
+              key={d.id}
+              onClick={() => onSeleziona(d.id)}
+              className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-elevated ${sel === d.id ? 'bg-elevated ring-1 ring-info/60' : ''}`}
+            >
+              <div className="w-11 shrink-0">
+                <div className="num text-lg leading-none font-medium" style={{ color: coloreLivello(d.livello) }}>
+                  {score(d.p)}
+                </div>
+                <div className="mt-1 text-[10px] text-muted">score</div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="num text-[13px] font-medium">{sigla(d.id)}</span>
+                  {d.tra_s >= 0 && <span className="num text-[11px] text-muted">tra {d.tra_s} s</span>}
+                </div>
+                <div className="truncate text-xs text-secondary">{d.via || sc.flotte[sc.perId.get(d.id)?.flotta ?? '']?.nome}</div>
+                <div className="truncate text-[11px] text-muted">{d.motivo}</div>
+              </div>
+              <Stato livello={d.livello} />
+            </motion.button>
+          ))}
+        </div>
+      </motion.section>
     </div>
   )
 }
@@ -284,8 +286,8 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
     <motion.section
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -10, scale: 0.98 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="glass shrink-0 rounded-2xl p-4"
       style={{ boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-info) 40%, transparent), 0 24px 48px -24px rgb(0 0 0 / 0.8)' }}
     >
@@ -308,6 +310,7 @@ function SchedaVeicolo({ sc, id, t, onChiudi }: { sc: Scenario; id: string; t: n
         <Cifra etichetta={`Richiesta in ${sc.soglie.orizzonte_min} min`} valore={pv == null ? '—' : Math.round(pv * 100)} unita="%" />
       </div>
       <BarraScore valore={s ?? 100} sc={sc} />
+      <RigaGps gps={statoGps(sc, id, t)} />
 
       {d?.motivo && (
         <div className="mt-4 rounded-xl bg-elevated p-3">
@@ -376,6 +379,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
   const [consiglio, setConsiglio] = useState<Consiglio | 'attesa' | null>(null)
   const v = sc.perId.get(r.veicolo_id)
   const pv = probabilita(sc, r.veicolo_id, t)
+  const gps = statoGps(sc, r.veicolo_id, t)
   const suggerita = causaSuggerita(r.motivo_previsto, cause)
   const mia = r.operatore === 'tu'
   const inCorso = r.stato === 'in_gestione' && mia
@@ -386,7 +390,11 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
     fetch(`/api/copilota/${r.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score: pv == null ? null : score(pv), pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)] }),
+      body: JSON.stringify({
+        score: pv == null ? null : score(pv),
+        pioggia_mm: sc.pioggia_mm[indiceFascia(sc, t)],
+        gps: gps ? (gps.stato === 'ok' ? `buono, circa ${Math.round(gps.metri ?? 0)} m` : testoGps(gps)) : null,
+      }),
     })
       .then((x) => (x.ok ? x.json() : null))
       .then((c: Consiglio | null) => {
@@ -411,8 +419,8 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
     <motion.section
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -10, scale: 0.98 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="glass min-h-0 overflow-y-auto overscroll-contain rounded-2xl p-4"
       style={{
         boxShadow: `0 0 0 1px color-mix(in srgb, ${r.stato === 'in_attesa' ? 'var(--color-critical)' : 'var(--color-info)'} 45%, transparent), 0 24px 48px -24px rgb(0 0 0 / 0.8)`,
@@ -439,6 +447,7 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
           {r.motivo_previsto ? `Il motore se lo aspettava: ${r.motivo_previsto}` : 'Il motore non aveva un motivo prevalente'}
           {pv != null && ` · score ${score(pv)}`}
         </div>
+        <RigaGps gps={gps} />
       </div>
 
       {r.stato === 'in_attesa' && (
@@ -546,6 +555,18 @@ function SchedaIntervento({ sc, r, t, onChiudi }: { sc: Scenario; r: Aperta; t: 
   )
 }
 
+/** Lo stato del GPS adesso: neutro se buono, arancione se degradato, grigio se assente (sottopasso). */
+function RigaGps({ gps }: { gps: StatoGps | null }) {
+  if (!gps) return null
+  const colore = gps.stato === 'ok' ? 'var(--color-muted)' : gps.stato === 'assente' ? 'var(--color-offline)' : 'var(--color-warn)'
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: colore }}>
+      <Satellite className="size-3.5" />
+      {gps.stato === 'ok' ? `GPS buono · ±${Math.round(gps.metri ?? 0)} m` : `${testoGps(gps)} · modalità degradata`}
+    </div>
+  )
+}
+
 function Cifra({ etichetta, valore, unita, colore }: { etichetta: string; valore: string | number; unita?: string; colore?: string }) {
   return (
     <div className="bg-surface px-3 py-2.5">
@@ -576,12 +597,9 @@ function BarraScore({ valore, sc }: { valore: number; sc: Scenario }) {
           <span key={x} className="absolute -top-1 h-3.5 w-px bg-line-strong" style={{ left: `${x}%` }} />
         ))}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] text-muted">
+      <div className="num mt-1.5 flex justify-between text-[10px] text-muted">
         <span>0</span>
-        <span>
-          rosso sotto <span className="num">{int}</span> · giallo sotto <span className="num">{oss}</span>
-        </span>
-        <span className="num">100</span>
+        <span>100</span>
       </div>
     </div>
   )

@@ -128,7 +128,7 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 
 `sensibilita.json` (facoltativo, da `tools/sensibilita.py`): una riga per variante (`parametro`, `gruppo`, `fattore`, `richieste`, `risparmio_ore_pct`, `veicoli_per_operatore_senza`/`_con`, `fermi_oltre_60s_senza`/`_con`, `richieste_da_rosso_pct`) e `intervalli` con minimo e massimo di ogni numero su tutte le varianti.
 
-`attenzione.json`: la griglia dell'attenzione (scenario con sistema). `livelli` dà per ogni veicolo una stringa con un carattere per minuto a partire da `inizio`: `-` fermo al deposito, `0` verde (autonomo), `1` giallo (in osservazione), `2` rosso (intervento probabile). `p` dà per ogni veicolo la probabilità minuto per minuto in percento, due cifre per minuto (`"07"` = 7%, `"99"` = 99% o più, `"--"` fermo): l'Autonomy Confidence Score è 100 meno questo numero. `dettagli` ha una voce per minuto con i 12 veicoli più a rischio, ognuno `[veicolo_id, livello, P, via, motivo, tra_s]`: `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti, `via` e `motivo` il tratto più rischioso davanti e il suo fattore principale, `tra_s` i secondi che mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste.
+`attenzione.json`: la griglia dell'attenzione (scenario con sistema). `livelli` dà per ogni veicolo una stringa con un carattere per minuto a partire da `inizio`: `-` fermo al deposito, `0` verde (autonomo), `1` giallo (in osservazione), `2` rosso (intervento probabile). `p` dà per ogni veicolo la probabilità minuto per minuto in percento, due cifre per minuto (`"07"` = 7%, `"99"` = 99% o più, `"--"` fermo): l'Autonomy Confidence Score è 100 meno questo numero. `dettagli` ha una voce per minuto con i 12 veicoli più a rischio, ognuno `[veicolo_id, livello, P, via, motivo, tra_s]`: `P` è la probabilità di almeno una richiesta nei prossimi `orizzonte_min` minuti, `via` e `motivo` il tratto più rischioso davanti e il suo fattore principale, `tra_s` i secondi che mancano a quel tratto. `validazione` dice quanto tempo passano i veicoli in ogni livello e da quale livello arrivano le richieste. `gps` riporta i parametri di `config/scenario.yaml` → `gps`: l'app considera degradato il GPS di un veicolo sopra `degradato_da_m` e aggiunge `contributo_degradato` (o `contributo_assente` nei sottopassi) alla sua probabilità, come una causa in più.
 ```json
 {"passo_s": 60, "inizio": "06:00", "soglie": {"osservazione": 0.25, "intervento": 0.45, "orizzonte_min": 3},
  "validazione": {"tempo_pct": {"verde": 66, "giallo": 27, "rosso": 7}, "richieste_da_pct": {"verde": 39, "giallo": 39, "rosso": 22}, "rosso_su_verde": 5.2, "anticipo_s": 120},
@@ -159,7 +159,7 @@ Ogni blocco `senza`/`con` contiene anche `richieste`, `attesa_max_s`, `operatori
 ```
 Le chiavi dei casi sono `previsto`, `prima` e `dopo`; quelle dei piani `fissi`, `normale` e `prudente`.
 
-`tratti.geojson`: copia di `data/processed/tratti.geojson` ridotta ai campi `seg_id` e `nome` (serve per disegnare le strade senza bisogno di internet).
+`tratti.geojson`: copia di `data/processed/tratti.geojson` ridotta ai campi `seg_id` e `nome` (serve per disegnare le strade senza bisogno di internet), più `gps_m`, la precisione del GPS stimata sul tratto in metri (dal rapporto canyon, parametri in `config/scenario.yaml` → `gps`), e `senza_gps: true` nei sottopassi, dove il segnale si perde (`gps_m` è `null`).
 
 ## 6. Diretta: WebSocket `/api/diretta` (`server/diretta.py`)
 
