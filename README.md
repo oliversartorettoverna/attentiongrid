@@ -75,6 +75,7 @@ python engine/pipeline.py --previsione-ore 1 --out console/data/scenario_tempora
 python tools/prova_pianificazione.py          # i tre piani con il temporale come previsto, un'ora prima e dopo (2 minuti) → piani.json
 python tools/soglie.py                        # confronta le soglie della griglia dell'attenzione (pochi secondi)
 python data/scripts/07_edifici_console.py     # edifici con altezza per la mappa 3D → console/data/scenario/edifici.geojson
+python data/scripts/08_area_sede.py           # strade ed edifici attorno alla sede, per il BOXi in sala → console/data/sede/
 
 # Facoltativo: sensibilità dei risultati ai pesi (circa un'ora, tenere il portatile acceso) → sensibilita.json
 python tools/sensibilita.py
@@ -89,6 +90,11 @@ npm --prefix web install
 npm --prefix web run build
 .venv/bin/uvicorn server.main:app --port 8001
 # poi apri http://localhost:8001 · tasti: spazio avvia/ferma · ← → ±10 min · T temporale un'ora prima del previsto
+#   B vola sul BOXi in sala · Maiusc+G / Maiusc+O / Maiusc+N paracadute: GPS debole, offline, normale
+# BOXi in sala: con il server acceso, sul Mac di Oliver Tailscale Funnel pubblica solo la pagina del telefono:
+#   tailscale funnel --bg --set-path=/telefono http://127.0.0.1:8001/telefono
+#   il telefono (dati mobili) apre https://macbook-air-di-oliver.tailff0477.ts.net/telefono/ e preme "Avvia il BOXi"
+#   console, diretta e copilota restano solo sul laptop; per spegnere: tailscale funnel --https=443 off
 # in sviluppo: server come sopra e, in un altro terminale, npm --prefix web run dev → http://localhost:5173
 
 # Riserva: la vecchia console statica

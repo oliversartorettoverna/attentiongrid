@@ -15,11 +15,12 @@ from pathlib import Path
 
 import yaml
 from fastapi import Body, FastAPI, HTTPException, WebSocket
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from server.diretta import Diretta, Giornata
 from server.copilota import Copilota, sigla
+from server.dal_vivo import DalVivo
 from server.registro import Registro, leggi_env
 
 RADICE = Path(__file__).resolve().parents[1]
@@ -31,8 +32,9 @@ CONFIG = RADICE / "config" / "scenario.yaml"
 registro = Registro(Path(os.environ.get("AG_REGISTRO", Path(__file__).with_name("registro_locale.jsonl"))), RADICE / ".env",
                     str(yaml.safe_load(open(CONFIG, encoding="utf-8"))["giorno"]["data"]),
                     {v["veicolo_id"]: v["flotta"] for v in json.load(open(DATI / "scenario" / "veicoli.json"))["veicoli"]})
-diretta = Diretta(Giornata(DATI, CONFIG, registro))
 _cfg = yaml.safe_load(open(CONFIG, encoding="utf-8"))
+dal_vivo = DalVivo(_cfg["dal_vivo"], _cfg["gps"], registro.url, registro.chiave, _cfg["sede"]) if "dal_vivo" in _cfg else None
+diretta = Diretta(Giornata(DATI, CONFIG, registro, dal_vivo))
 _veicoli = json.load(open(DATI / "scenario" / "veicoli.json"))
 NOME_FLOTTA = {v["veicolo_id"]: _veicoli["flotte"][v["flotta"]]["nome"] for v in _veicoli["veicoli"]}
 copilota = Copilota(_cfg.get("copilota", {}), leggi_env(RADICE / ".env"))
@@ -45,6 +47,25 @@ async def ciclo_di_vita(_app):
 
 
 app = FastAPI(title="AttentionGrid", lifespan=ciclo_di_vita)
+
+
+@app.get("/telefono")
+def telefono_senza_barra():
+    return RedirectResponse("/telefono/")
+
+
+@app.get("/telefono/")
+def pagina_telefono():
+    """La pagina che trasforma un telefono nel BOXi in sala. Sul telefono va aperta in https (il browser dà la
+    posizione solo lì); dal laptop basta localhost."""
+    return FileResponse(RADICE / "telefono" / "index.html")
+
+
+@app.get("/telefono/config.js")
+def config_telefono():
+    """Indirizzo e chiave pubblicabile di Supabase per la pagina del telefono, dal file .env: mai nel repository."""
+    js = f"window.AG = {json.dumps({'supabaseUrl': registro.url, 'chiave': registro.chiave})};"
+    return Response(js, media_type="application/javascript")
 
 
 @app.get("/api/interventi")

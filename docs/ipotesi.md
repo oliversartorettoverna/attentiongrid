@@ -178,6 +178,18 @@ Ogni tratto ha una precisione del GPS stimata dal rapporto canyon (altezza dei p
 
 Nel rischio previsto il motore tiene già un piccolo contributo per il GPS in canyon (0,005 per tratto): quello è la previsione, questo è lo stato del momento. Nella giornata della centrale ci sono in ogni momento 5–6 veicoli con il GPS degradato su 80–90 in strada.
 
+## BOXi in sala
+
+| Parametro | Valore | Stato |
+|---|---|---|
+| Sede | Spazio Attivo Roma Casilina, Via Casilina 3T (41,8902 N, 12,5179 E, geocodifica OSM) | da confermare sul posto |
+| Score con GPS buono | 95 (probabilità base 5%) | scelta |
+| Attenzione | precisione da 15 m: +15% di probabilità, score circa 81 | tarato sul percorso nella sede |
+| Critico | precisione da 25 m o nessun fix (al chiuso): +40%, score circa 57, si apre una richiesta | scelta, da tarare provando nel posto vero |
+| Offline | nessun segnale per 5 s | scelta |
+
+Provato nella sede l'11/10/2026: fuori la precisione è stata 5,5 m stabile, entrando è salita a 25 m in 4 secondi, dentro è rimasta tra 25 e 36 m. Al chiuso il telefono dà posizioni nuove solo ogni 5-10 s e la precisione oscilla attorno alla soglia: per questo c'è un'isteresi (si torna giallo solo sotto 15 m per 5 s, nominale sotto 12 m per 5 s) e, senza posizioni nuove, la precisione peggiora di 2 m al secondo invece di saltare a 100 m. In una seconda prova, camminando all'aperto subito dopo l'avvio, il telefono misurava 9-13 m: la soglia del giallo è passata da 10 a 15 m. Per il pitch conviene avviare la pagina almeno 30 s prima, fermi all'aperto: il GPS scende a circa 5 m.
+
 ## Copilota AI
 
 | Parametro | Valore | Stato | Dove |

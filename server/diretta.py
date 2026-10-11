@@ -61,8 +61,9 @@ AZIONI = ("riparte", "deviato", "assistenza", "arresto")
 
 
 class Giornata:
-    def __init__(self, dati: Path, config: Path, registro=None):
+    def __init__(self, dati: Path, config: Path, registro=None, dal_vivo=None):
         self.registro = registro    # server/registro.py: file locale e Supabase
+        self.dal_vivo = dal_vivo    # server/dal_vivo.py: il telefono che fa da BOXi in sala
         cfg = yaml.safe_load(open(config, encoding="utf-8")).get("console", {})
         # dopo la chiusura il veicolo resta fermo ancora per un po' con queste azioni
         self.fermo_dopo = {"assistenza": cfg.get("fermo_assistenza_min", 10) * 60,
@@ -104,6 +105,8 @@ class Giornata:
             self.temporale = c["valore"]
         elif tipo in ("prendi", "chiudi", "rilascia"):
             self._intervento(tipo, c)
+        elif tipo == "paracadute" and self.dal_vivo:
+            self.dal_vivo.comando(c.get("valore"))
 
     def _intervento(self, tipo: str, c: dict):
         miei = self.miei[self.temporale]
@@ -111,7 +114,8 @@ class Giornata:
         if aperta is None:
             return
         if tipo == "prendi" and aperta["stato"] == "in_attesa":
-            miei[aperta["id"]] = {"preso": self.t, "chiuso": None, "azione": None, "causa": None}
+            miei[aperta["id"]] = {"preso": self.t, "preso_reale": time.monotonic(), "chiuso": None, "azione": None,
+                                  "causa": None}
         elif tipo == "rilascia" and aperta["operatore"] == "tu" and aperta["stato"] == "in_gestione":
             # la prende un collega da adesso, con la durata del rigioco: il tempo già passato con te resta
             miei[aperta["id"]]["ceduto"] = self.t
@@ -181,6 +185,10 @@ class Giornata:
                 ritardo += attesa + r["durata_s"]
             if ritardo:
                 ritardi[v] = round(ritardo, 1)
+        if self.dal_vivo:
+            live = self.dal_vivo.richiesta(t, self.dal_vivo.stato(), self.miei[self.temporale])
+            if live:
+                aperte.append(live)
         aperte.sort(key=lambda r: r["inizio"])
         return {"ritardi": ritardi, "richieste": aperte}
 
@@ -190,7 +198,8 @@ class Giornata:
                 "temporale": self.temporale, "scenario": GIORNATE[self.temporale],
                 "temporali": list(self.giornate), "cause": self.cause,
                 "chiusi": self.chiusi[self.temporale][-50:],
-                "registro": self.registro.stato() if self.registro else None, **self.stato_a(self.t)}
+                "registro": self.registro.stato() if self.registro else None,
+                "dal_vivo": self.dal_vivo.stato() if self.dal_vivo else None, **self.stato_a(self.t)}
 
 
 class Diretta:
@@ -205,6 +214,8 @@ class Diretta:
         self._compito = asyncio.create_task(self._trasmetti())
         if self.giornata.registro:
             self._sincronizza = asyncio.create_task(self.giornata.registro.sincronizza())
+        if self.giornata.dal_vivo:
+            self._segui = asyncio.create_task(self.giornata.dal_vivo.segui())
 
     async def _trasmetti(self):
         while True:

@@ -49,7 +49,9 @@ flowchart LR
 
 **12. GPS in diretta** (in `web/src/lib/scenario.ts`). Ogni veicolo prende la precisione del GPS della strada che percorre (stimata dal motore con il rapporto canyon): sopra 10 m è in modalità degradata, lo score scende e sulla mappa compare il cerchio di incertezza.
 
-**13. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
+**13. BOXi in sala** (`telefono/`, `server/dal_vivo.py`). Un telefono manda a Supabase posizione e precisione vere del GPS; il server le legge ogni secondo e lo tratta come un veicolo: al chiuso la precisione peggiora e lo score scende, se smette di mandare segnali va offline. Da critico apre una richiesta per la console.
+
+**14. App** (`web/`). Legge i file di `console/data/scenario/` dal server e la diretta dalla WebSocket. Disegna la mappa 3D con i nostri dati (niente mappe online), anima i veicoli sul loro orologio (ora meno ritardo) e mostra le cinque schermate: console operatore, planner turni, registro, dashboard flotta, configurazione.
 
 ## Strumenti di verifica
 

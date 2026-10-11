@@ -266,6 +266,7 @@ export const SIGLA_FLOTTA: Record<string, string> = {
 
 /** Nome breve del veicolo per l'interfaccia: boxi_07 → BX-07, navette_104 → NV-104. */
 export function sigla(id: string) {
+  if (id === 'boxi_sala') return 'BOXi in sala'
   const [f, n] = id.split('_').length > 2 ? [id.split('_').slice(0, 2).join('_'), id.split('_')[2]] : id.split('_')
   const pref: Record<string, string> = { boxi: 'BX', corriere_a: 'CA', corriere_b: 'CB', navette: 'NV' }
   return `${pref[f] ?? f.slice(0, 2).toUpperCase()}-${n}`

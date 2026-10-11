@@ -100,3 +100,46 @@
 .maplibregl-ctrl-attrib {
   display: none;
 }
+
+/* BOXi in sala sulla mappa: viola "dato dal vivo", poi i colori dello stato */
+.boxi-sala {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  --c: var(--color-info);
+}
+.boxi-sala[data-stato='attenzione'] { --c: var(--color-warn); }
+.boxi-sala[data-stato='critico'] { --c: var(--color-critical); }
+.boxi-sala[data-stato='offline'] { --c: var(--color-offline); }
+.boxi-sala .punto {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 0 3px var(--color-base), 0 0 18px var(--c);
+}
+.boxi-sala .anello {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  animation: pulse-ring 1.6s var(--ease-out-quint) infinite;
+}
+.boxi-sala[data-stato='offline'] .anello { animation: none; opacity: 0; }
+.boxi-sala .nome {
+  position: absolute;
+  top: 22px;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 500 11px var(--font-sans);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-base) 80%, transparent);
+  box-shadow: inset 0 0 0 1px var(--c);
+}
