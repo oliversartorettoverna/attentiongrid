@@ -137,14 +137,15 @@ sede:                           # la sede dell'hackathon, dove il telefono fa da
 
 dal_vivo:                       # il telefono che fa da BOXi in sala (server/dal_vivo.py, telefono/index.html)
   probabilita_base: 0.05        # come un veicolo nominale: score 95 con il GPS buono
-  attenzione_da_m: 10           # da questa precisione il GPS è degradato: +15% di probabilità (gps.contributo_degradato)
+  attenzione_da_m: 15           # da questa precisione il GPS è degradato: +15% di probabilità (gps.contributo_degradato);
+                                # all'aperto, camminando appena avviato, il telefono misura 9-13 m: sotto 15 resta nominale
   critico_da_m: 25              # da questa precisione (o senza fix, al chiuso) è quasi perso...
   contributo_critico: 0.40      # ...e la probabilità sale del 40%: score sotto 65, rosso
   offline_dopo_s: 5             # senza segnali per tanto tempo il veicolo è offline, collegamento perso
   # isteresi, tarata sul percorso vero dentro la sede (11/10/2026: fuori 5,5 m, dentro 25-36 m): il colore peggiora
   # subito, ma migliora solo se la precisione resta sotto una soglia più bassa per `tenuta_s` secondi (niente sfarfallio)
   torna_attenzione_sotto_m: 15
-  torna_nominale_sotto_m: 8
+  torna_nominale_sotto_m: 12
   tenuta_s: 5
   lettura_ogni_s: 1             # ogni quanto il server legge la posizione da Supabase
   indirizzo_telefono: https://macbook-air-di-oliver.tailff0477.ts.net/telefono/   # Tailscale Funnel dal Mac di Oliver
