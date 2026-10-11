@@ -56,7 +56,10 @@
     </main>
     <script>
       // Soglie come in config/scenario.yaml → dal_vivo: solo per l'etichetta qui, lo stato vero lo decide il server
-      const ATTENZIONE_M = 10, CRITICO_M = 25, SENZA_FIX_DOPO_S = 4
+      const ATTENZIONE_M = 10, CRITICO_M = 25
+      // al chiuso il telefono dà una posizione nuova solo ogni 5-10 s: senza fix nuovi l'ultima precisione peggiora
+      // piano (2 m al secondo dopo 5 s), invece di saltare a 100 m e far sfarfallare la console
+      const SENZA_FIX_DOPO_S = 5, PEGGIORA_M_AL_S = 2
       const $ = (id) => document.getElementById(id)
       let ultimoFix = null, guardia = null, timer = null, wakeLock = null, inviate = 0, ultimoInvio = 0
 
@@ -101,8 +104,9 @@
         // ogni secondo si manda l'ultima posizione; senza fix nuovi (al chiuso) la precisione si dichiara pessima
         timer = setInterval(() => {
           if (!ultimoFix) return
-          const vecchio = (Date.now() - ultimoFix.quando) / 1000 > SENZA_FIX_DOPO_S
-          const precisione = vecchio ? Math.max(ultimoFix.acc, 100) : ultimoFix.acc
+          const eta = (Date.now() - ultimoFix.quando) / 1000
+          const vecchio = eta > SENZA_FIX_DOPO_S
+          const precisione = vecchio ? Math.min(100, ultimoFix.acc + (eta - SENZA_FIX_DOPO_S) * PEGGIORA_M_AL_S) : ultimoFix.acc
           if (vecchio) mostra(precisione, 'nessun fix')
           invia(ultimoFix.lat, ultimoFix.lon, Math.round(precisione * 10) / 10)
           $('ultimo').textContent = ultimoInvio ? `${Math.round((Date.now() - ultimoInvio) / 1000)} s fa` : '—'

@@ -188,7 +188,7 @@ Nel rischio previsto il motore tiene già un piccolo contributo per il GPS in ca
 | Critico | precisione da 25 m o nessun fix (al chiuso): +40%, score circa 57, si apre una richiesta | scelta, da tarare provando nel posto vero |
 | Offline | nessun segnale per 5 s | scelta |
 
-Le soglie vanno provate nella sede: se anche fuori il GPS è debole (portici, palazzi alti) il veicolo parte già giallo.
+Provato nella sede l'11/10/2026: fuori la precisione è stata 5,5 m stabile, entrando è salita a 25 m in 4 secondi, dentro è rimasta tra 25 e 36 m. Al chiuso il telefono dà posizioni nuove solo ogni 5-10 s e la precisione oscilla attorno alla soglia: per questo c'è un'isteresi (si torna giallo solo sotto 15 m per 5 s, nominale sotto 8 m per 5 s) e, senza posizioni nuove, la precisione peggiora di 2 m al secondo invece di saltare a 100 m.
 
 ## Copilota AI
 

@@ -29,6 +29,28 @@ class DalVivo:
         self.episodio = None           # la richiesta aperta dal BOXi in sala: {"id", "inizio"}
         self.episodi = 0
         self.errore = ""
+        self.livello = "nominale"      # il colore attuale, con isteresi
+        self.meglio_da = None          # da quando la precisione è sotto la soglia per migliorare
+
+    def _livello(self, precisione: float) -> str:
+        """Il colore con isteresi: peggiora subito, migliora solo dopo `tenuta_s` secondi sotto una soglia più bassa.
+        Al chiuso la precisione oscilla attorno alle soglie: senza isteresi il veicolo cambierebbe colore ogni secondo."""
+        c = self.cfg
+        grezzo = "critico" if precisione >= c["critico_da_m"] else "attenzione" if precisione >= c["attenzione_da_m"] else "nominale"
+        ordine = {"nominale": 0, "attenzione": 1, "critico": 2}
+        if ordine[grezzo] >= ordine[self.livello]:
+            self.livello, self.meglio_da = grezzo, None
+            return self.livello
+        soglia = c.get("torna_attenzione_sotto_m", 15) if self.livello == "critico" else c.get("torna_nominale_sotto_m", 8)
+        if precisione >= soglia:
+            self.meglio_da = None
+        elif self.meglio_da is None:
+            self.meglio_da = time.monotonic()
+        elif time.monotonic() - self.meglio_da >= c.get("tenuta_s", 5):
+            # scende di un gradino alla volta
+            self.livello = "attenzione" if self.livello == "critico" else "nominale"
+            self.meglio_da = None
+        return self.livello
 
     # lettura da Supabase ------------------------------------------------------------------------
     def _leggi(self):
@@ -64,10 +86,9 @@ class DalVivo:
         if offline:
             livello, p = "offline", None
         else:
-            extra = (self.cfg["contributo_critico"] if precisione >= self.cfg["critico_da_m"]
-                     else self.gps["contributo_degradato"] if precisione >= self.cfg["attenzione_da_m"] else 0.0)
+            livello = self._livello(precisione)
+            extra = {"critico": self.cfg["contributo_critico"], "attenzione": self.gps["contributo_degradato"]}.get(livello, 0.0)
             p = 1 - (1 - self.cfg["probabilita_base"]) * (1 - extra)
-            livello = "critico" if precisione >= self.cfg["critico_da_m"] else "attenzione" if extra else "nominale"
         return {"id": ID, "lat": pos["lat"], "lon": pos["lon"], "precisione_m": round(precisione, 1),
                 "ultimo_segnale_s": round(eta, 1), "stato": livello, "p": None if p is None else round(p, 3),
                 "paracadute": self.paracadute}

@@ -227,7 +227,7 @@ Il telefono apre `/telefono/` (in https) e ogni secondo scrive la sua posizione 
 | Campo | Significato |
 |---|---|
 | `veicolo` | Sempre `boxi_sala` (la chiave pubblicabile può scrivere solo questa riga) |
-| `lat`, `lon`, `precisione_m` | Posizione e precisione del GPS dal browser; senza fix nuovi da 4 s (al chiuso) la precisione si dichiara almeno 100 m |
+| `lat`, `lon`, `precisione_m` | Posizione e precisione del GPS dal browser; senza fix nuovi da più di 5 s (al chiuso) l'ultima precisione peggiora di 2 m al secondo, fino a 100 m |
 | `aggiornato_il` | Ora del telefono dell'ultimo invio |
 
 Il server la legge ogni secondo e la mette nel messaggio della diretta come `dal_vivo`:
@@ -235,7 +235,7 @@ Il server la legge ogni secondo e la mette nel messaggio della diretta come `dal
 {"id": "boxi_sala", "lat": 41.89035, "lon": 12.5177, "precisione_m": 40.0, "ultimo_segnale_s": 0.7,
  "stato": "critico", "p": 0.43, "paracadute": null}
 ```
-`stato` è `nominale`, `attenzione` (da `dal_vivo.attenzione_da_m`), `critico` (da `dal_vivo.critico_da_m`) o `offline` (nessun segnale per `dal_vivo.offline_dopo_s`). Da critico o offline il server apre una richiesta con `veicolo_id: "boxi_sala"`, `assegnata: true` e `id` sopra 1.000.000, che si prende e si chiude come le altre. `/telefono/config.js` dà alla pagina indirizzo e chiave pubblicabile di Supabase dal file `.env`.
+`stato` è `nominale`, `attenzione` (da `dal_vivo.attenzione_da_m`), `critico` (da `dal_vivo.critico_da_m`) o `offline` (nessun segnale per `dal_vivo.offline_dopo_s`). Lo stato peggiora subito ma migliora di un gradino solo dopo `tenuta_s` secondi sotto `torna_attenzione_sotto_m` o `torna_nominale_sotto_m` (isteresi). Da critico o offline il server apre una richiesta con `veicolo_id: "boxi_sala"`, `assegnata: true` e `id` sopra 1.000.000, che si prende e si chiude come le altre. `/telefono/config.js` dà alla pagina indirizzo e chiave pubblicabile di Supabase dal file `.env`.
 
 `console/data/sede/strade.geojson` e `edifici.geojson` (da `data/scripts/08_area_sede.py`): strade e edifici con altezza `h` attorno alla sede dell'hackathon, per mostrare il BOXi in sala sulla mappa.
 
