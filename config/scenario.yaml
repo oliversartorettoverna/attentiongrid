@@ -142,3 +142,4 @@ dal_vivo:                       # il telefono che fa da BOXi in sala (server/dal
   contributo_critico: 0.40      # ...e la probabilità sale del 40%: score sotto 65, rosso
   offline_dopo_s: 5             # senza segnali per tanto tempo il veicolo è offline, collegamento perso
   lettura_ogni_s: 1             # ogni quanto il server legge la posizione da Supabase
+  indirizzo_telefono: https://macbook-air-di-oliver.tailff0477.ts.net/telefono/   # Tailscale Funnel dal Mac di Oliver

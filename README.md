@@ -91,7 +91,10 @@ npm --prefix web run build
 .venv/bin/uvicorn server.main:app --port 8001
 # poi apri http://localhost:8001 · tasti: spazio avvia/ferma · ← → ±10 min · T temporale un'ora prima del previsto
 #   B vola sul BOXi in sala · Maiusc+G / Maiusc+O / Maiusc+N paracadute: GPS debole, offline, normale
-# BOXi in sala: il telefono apre https://<indirizzo pubblico del server>/telefono/ (vedi docs/formati-dati.md, sezione 9)
+# BOXi in sala: con il server acceso, sul Mac di Oliver Tailscale Funnel pubblica solo la pagina del telefono:
+#   tailscale funnel --bg --set-path=/telefono http://127.0.0.1:8001/telefono
+#   il telefono (dati mobili) apre https://macbook-air-di-oliver.tailff0477.ts.net/telefono/ e preme "Avvia il BOXi"
+#   console, diretta e copilota restano solo sul laptop; per spegnere: tailscale funnel --https=443 off
 # in sviluppo: server come sopra e, in un altro terminale, npm --prefix web run dev → http://localhost:5173
 
 # Riserva: la vecchia console statica
