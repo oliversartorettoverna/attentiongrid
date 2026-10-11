@@ -8,8 +8,10 @@ Uso (dalla radice del repository):
 In sviluppo l'app gira con `npm run dev` in web/ e Vite inoltra qui le chiamate a /api e /data.
 Gira tutto sul laptop: se cade la rete, mappa, simulatore e motore continuano.
 """
+import asyncio
 import json
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,6 +24,10 @@ from server.diretta import Diretta, Giornata
 from server.copilota import Copilota, sigla
 from server.dal_vivo import DalVivo
 from server.registro import Registro, leggi_env
+from server.what_if import Interprete
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
+from what_if import WhatIf  # noqa: E402  (il motore del what-if, engine/what_if.py)
 
 RADICE = Path(__file__).resolve().parents[1]
 DATI = RADICE / "console" / "data"
@@ -38,11 +44,14 @@ diretta = Diretta(Giornata(DATI, CONFIG, registro, dal_vivo))
 _veicoli = json.load(open(DATI / "scenario" / "veicoli.json"))
 NOME_FLOTTA = {v["veicolo_id"]: _veicoli["flotte"][v["flotta"]]["nome"] for v in _veicoli["veicoli"]}
 copilota = Copilota(_cfg.get("copilota", {}), leggi_env(RADICE / ".env"))
+interprete = Interprete(copilota, _cfg["eventi"]["luoghi"], _cfg.get("copilota", {}).get("attesa_what_if_s", 4))
+what_if: dict = {}   # il motore del what-if, caricato all'avvio (circa un secondo)
 
 
 @asynccontextmanager
 async def ciclo_di_vita(_app):
     await diretta.avvia()
+    what_if["motore"] = asyncio.create_task(asyncio.to_thread(WhatIf, RADICE))
     yield
 
 
@@ -90,6 +99,22 @@ async def suggerimento(richiesta_id: int, dati: dict = Body(default={})):
            "ora": f"{int(g.t) // 3600:02d}:{int(g.t) % 3600 // 60:02d}", "secondi_di_attesa": round(g.t - aperta["inizio"]),
            "richieste_oggi_sulla_via": len(oggi), "cause_confermate_oggi_sulla_via": confermate[-5:]}
     return await copilota.suggerisci((g.temporale, richiesta_id), ctx)
+
+
+@app.post("/api/what-if")
+async def e_se(dati: dict = Body(default={})):
+    """E se domani c'è un evento? Dalla frase (o dai campi già scelti) al confronto con il piano prudente."""
+    capito = await interprete.capisci(dati["frase"]) if dati.get("frase") else {
+        "luogo": dati.get("luogo"), "ora": dati.get("ora"), "grandezza": dati.get("grandezza", "medio"),
+        "durata_ore": dati.get("durata_ore"), "fonte": "scelta"}
+    luoghi = _cfg["eventi"]["luoghi"]
+    if capito["luogo"] not in luoghi:
+        return {"capito": capito, "errore": "Non ho capito il luogo. Prova con uno di questi: " + ", ".join(luoghi) + "."}
+    if not capito["ora"] or not "06:00" <= capito["ora"] <= "23:00":
+        return {"capito": capito, "errore": "Non ho capito l'ora, oppure è fuori dalla giornata (dalle 6 alle 23)."}
+    motore = await what_if["motore"]
+    risultato = await asyncio.to_thread(motore.calcola, capito["luogo"], capito["ora"], capito["grandezza"], capito["durata_ore"])
+    return {"capito": capito, "risultato": risultato}
 
 
 @app.websocket("/api/diretta")

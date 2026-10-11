@@ -76,6 +76,22 @@ Il costo per veicolo al mese di ogni piano è ore operatore × costo orario × 3
 
 In Italia il lavoro costa il 37% in meno, e allo stesso modo la centrale propria del cliente; il prezzo per ora invece è lo stesso. Con 8 € l'ora i BOXi in Italia risparmiano il 9% contro la loro centrale con la licenza (23% contando i costi nascosti), contro il 38% (48%) in Germania. Un prezzo italiano per ora non è ancora stato scelto.
 
+## Eventi (what-if nel planner)
+
+Un evento porta gente in strada vicino al luogo. Nelle ore di afflusso e di deflusso ogni tratto entro il raggio prende un contributo in più alla probabilità di richiesta, combinato con gli altri fattori come cause indipendenti, come la scuola. Valori in `config/scenario.yaml`, sezione `eventi` (`engine/what_if.py`).
+
+| Parametro | Valore | Stato |
+|---|---|---|
+| Afflusso | le 2 ore prima dell'inizio | **stima** |
+| Deflusso | l'ora dopo la fine | **stima** |
+| Durata, se non detta | 2 ore | **stima** |
+| Evento piccolo | +0,015 entro 300 m | **stima** (metà della scuola) |
+| Evento medio | +0,03 entro 500 m | **stima** (come l'uscita da scuola) |
+| Evento grande | +0,06 entro 800 m | **stima** (il doppio della scuola) |
+| Luoghi riconosciuti | San Pietro, Castel Sant'Angelo, Piazza Cavour, Piazza Risorgimento, Piazza Navona, Campo de' Fiori, Trastevere, Stadio Olimpico | **scelta**; l'Olimpico è fuori dalla mappa della demo e il motore lo dice |
+
+Le persone che mancano sono solo quelle che l'evento chiede in più rispetto al piano prudente: il piano è verificato simulando la giornata vera, mentre il conto veloce con Erlang a blocchi di 5 minuti è più pessimista anche senza evento.
+
 ## Rischio di intervento
 
 Il rischio di un tratto in una fascia è la probabilità che un veicolo che lo percorre chieda aiuto. I fattori si combinano come cause indipendenti:

@@ -121,6 +121,7 @@ copilota:                       # copilota AI nella scheda intervento (server/co
   modello: claude-opus-5-5
   effort: low                   # risposta in pochi secondi: deve stare dentro i 20 s dell'intervento
   attesa_max_s: 8               # oltre questo tempo si usa il ripiego costruito dai dati del motore
+  attesa_what_if_s: 4           # nel planner basta capire una frase: oltre questo tempo la legge il ripiego (stessi numeri)
 
 gps:                            # precisione del GPS stimata per strada e stato del GPS in diretta (stima, vedi docs/ipotesi.md)
   precisione_base_m: 3          # a cielo aperto
@@ -149,3 +150,21 @@ dal_vivo:                       # il telefono che fa da BOXi in sala (server/dal
   tenuta_s: 5
   lettura_ogni_s: 1             # ogni quanto il server legge la posizione da Supabase
   indirizzo_telefono: https://macbook-air-di-oliver.tailff0477.ts.net/telefono/   # Tailscale Funnel dal Mac di Oliver
+
+eventi:                         # what-if nel planner (engine/what_if.py): un evento fa salire il rischio vicino al luogo (stima, vedi docs/ipotesi.md)
+  afflusso_ore: 2               # la gente arriva nelle 2 ore prima dell'inizio...
+  deflusso_ore: 1               # ...e va via nell'ora dopo la fine
+  durata_ore: 2                 # se la frase non dice quanto dura
+  grandezze:                    # contributo in più alla probabilità di richiesta sui tratti entro il raggio, come la scuola (0,03)
+    piccolo: {contributo: 0.015, raggio_m: 300}
+    medio: {contributo: 0.03, raggio_m: 500}
+    grande: {contributo: 0.06, raggio_m: 800}
+  luoghi:                       # [lon, lat] e i nomi con cui si riconoscono nella frase
+    San Pietro: {punto: [12.4572, 41.9022], nomi: ["san pietro", "vaticano", "via della conciliazione"]}
+    Castel Sant'Angelo: {punto: [12.4663, 41.9031], nomi: ["castel sant'angelo", "castel sant angelo"]}
+    Piazza Cavour: {punto: [12.4689, 41.9040], nomi: ["piazza cavour", "cavour", "palazzo di giustizia"]}
+    Piazza Risorgimento: {punto: [12.4600, 41.9067], nomi: ["risorgimento", "musei vaticani", "ottaviano"]}
+    Piazza Navona: {punto: [12.4731, 41.8992], nomi: ["navona"]}
+    Campo de' Fiori: {punto: [12.4722, 41.8957], nomi: ["campo de' fiori", "campo de fiori", "campo dei fiori"]}
+    Trastevere: {punto: [12.4699, 41.8894], nomi: ["trastevere", "santa maria in trastevere"]}
+    Stadio Olimpico: {punto: [12.4547, 41.9341], nomi: ["olimpico", "stadio"]}   # fuori dalla mappa della demo

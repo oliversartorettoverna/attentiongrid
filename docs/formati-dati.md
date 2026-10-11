@@ -251,3 +251,17 @@ Il server la legge ogni secondo e la mette nel messaggio della diretta come `dal
 
 `console/data/sede/strade.geojson` e `edifici.geojson` (da `data/scripts/08_area_sede.py`): strade e edifici con altezza `h` attorno alla sede dell'hackathon, per mostrare il BOXi in sala sulla mappa.
 
+
+## 10. What-if nel planner: `POST /api/what-if` (`server/what_if.py`, `engine/what_if.py`)
+
+L'app manda la frase, `{"frase": "E se domani c'è un evento grande a San Pietro alle 17?"}`, oppure i campi già scelti (`luogo`, `ora`, `grandezza`, `durata_ore`). Il copilota capisce dalla frase luogo (uno di `eventi.luoghi` in `config/scenario.yaml`), ora, grandezza e durata; i numeri e le frasi della risposta li fa il motore. Risposta:
+```json
+{"capito": {"luogo": "San Pietro", "ora": "17:00", "grandezza": "grande", "durata_ore": null, "fonte": "copilota"},
+ "risultato": {"luogo": "San Pietro", "ora": "17:00", "fine": "19:00", "grandezza": "grande", "durata_ore": 2,
+               "raggio_m": 800, "tratti_vicini": 412, "finestre": [["15:00", "17:00"], ["19:00", "20:00"]],
+               "ore": ["06:00", "07:00"], "piano": [3, 3], "necessari_base": [3, 3], "necessari_evento": [3, 3],
+               "richieste_in_piu_ora": [0.0, 0.0], "richieste_in_piu": 414,
+               "vie": [{"via": "Via Crescenzio", "richieste": 41.2}], "mancano": [0, 0],
+               "frasi": ["Con l'evento: circa 414 richieste di aiuto in più ...", "Il piano prudente è scoperto ..."]}}
+```
+`fonte` è `copilota`, oppure `ripiego` quando manca la chiave, manca la rete o Claude non risponde entro `copilota.attesa_what_if_s` (la frase la legge allora un riconoscitore di ore e nomi di luoghi). `piano` sono gli operatori del piano prudente per ora (`piani.json`, caso `previsto`), `necessari_base` e `necessari_evento` gli operatori necessari per ora secondo Erlang senza e con l'evento, `mancano` le persone che l'evento chiede oltre a quello che il piano copre già (`necessari_evento − max(piano, necessari_base)`, mai sotto zero). Se il luogo non è riconosciuto o l'ora manca (o è fuori dalle 6–23), al posto di `risultato` c'è `errore` con una frase per l'operatore. Prova da terminale: `python engine/what_if.py "San Pietro" 17:00 grande`.
