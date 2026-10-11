@@ -114,7 +114,8 @@ class Giornata:
         if aperta is None:
             return
         if tipo == "prendi" and aperta["stato"] == "in_attesa":
-            miei[aperta["id"]] = {"preso": self.t, "chiuso": None, "azione": None, "causa": None}
+            miei[aperta["id"]] = {"preso": self.t, "preso_reale": time.monotonic(), "chiuso": None, "azione": None,
+                                  "causa": None}
         elif tipo == "rilascia" and aperta["operatore"] == "tu" and aperta["stato"] == "in_gestione":
             # la prende un collega da adesso, con la durata del rigioco: il tempo già passato con te resta
             miei[aperta["id"]]["ceduto"] = self.t

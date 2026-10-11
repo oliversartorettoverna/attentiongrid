@@ -321,7 +321,10 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
           marcatore.addTo(m)
           sullaMappa = true
         }
-        if (elemento.dataset.stato !== d.stato) elemento.dataset.stato = d.stato
+        if (elemento.dataset.stato !== d.stato) {
+          elemento.dataset.stato = d.stato
+          elemento.querySelector('.nome')!.textContent = d.stato === 'offline' ? 'BOXi in sala · offline' : 'BOXi in sala'
+        }
         ;(m.getSource('dal-vivo') as GeoJSONSource).setData({
           type: 'FeatureCollection',
           features: [{ type: 'Feature', properties: { g: d.precisione_m, stato: d.stato }, geometry: { type: 'Point', coordinates: [d.lon, d.lat] } }],

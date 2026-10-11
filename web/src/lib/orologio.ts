@@ -23,6 +23,8 @@ export interface RichiestaDiretta {
   // in gestione; oppure chiusa da te ma il veicolo è ancora fermo per assistenza in strada o arresto
   stato: 'in_attesa' | 'in_gestione' | 'assistenza' | 'arresto'
   riparte?: number // per assistenza e arresto: quando il veicolo riparte (secondo della giornata)
+  secondi_reali?: number // BOXi in sala: da quanto aspetta, in secondi veri (non sull'orologio della giornata)
+  in_gestione_da_s?: number | null
 }
 
 /** Stato del registro sul server: quanti interventi salvati in locale e quanti già su Supabase. */

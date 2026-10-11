@@ -78,7 +78,7 @@ class DalVivo:
         critico = stato is not None and stato["stato"] in ("critico", "offline")
         if self.episodio is None and critico:
             self.episodi += 1
-            self.episodio = {"id": ID_RICHIESTE + self.episodi, "inizio": t}
+            self.episodio = {"id": ID_RICHIESTE + self.episodi, "inizio": t, "reale": time.monotonic()}
         if self.episodio is None:
             return None
         mio = miei.get(self.episodio["id"])
@@ -93,7 +93,11 @@ class DalVivo:
                 "inizio": round(self.episodio["inizio"], 1), "attesa_s": 10**6, "durata_s": 0,
                 "operatore": "tu" if mio else 2, "assegnata": not mio,
                 "via": self.sede["nome"], "stato": "in_gestione" if mio else "in_attesa",
-                "motivo_previsto": "collegamento perso" if perso else "GPS debole al chiuso"}
+                "motivo_previsto": "collegamento perso" if perso else "GPS debole al chiuso",
+                # il telefono vive nel tempo reale: attesa e gestione si contano in secondi veri, non sull'orologio
+                # della giornata simulata (che può essere in pausa o accelerato)
+                "secondi_reali": round(time.monotonic() - self.episodio["reale"], 1),
+                "in_gestione_da_s": round(time.monotonic() - mio["preso_reale"], 1) if mio and mio.get("preso_reale") else None}
 
     def comando(self, valore):
         self.paracadute = valore if valore in ("gps", "offline") else None

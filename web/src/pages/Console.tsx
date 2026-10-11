@@ -82,6 +82,9 @@ function priorita(r: RichiestaDiretta) {
 
 function apri(r: RichiestaDiretta, t: number): Aperta {
   // presa: quando un operatore l'ha presa (per le richieste ancora in attesa è nel futuro)
+  if (r.secondi_reali != null)
+    // BOXi in sala: i tempi arrivano dal server in secondi veri, la giornata simulata può essere in pausa
+    return { ...r, trascorsi: r.secondi_reali, presa: r.in_gestione_da_s != null ? t - r.in_gestione_da_s : t + 1 }
   return { ...r, trascorsi: Math.max(0, t - r.inizio), presa: r.inizio + r.attesa_s }
 }
 
@@ -121,7 +124,7 @@ function Coda({ sc, sel, onSeleziona }: { sc: Scenario; sel: string | null; onSe
           <span className="size-2 rounded-full ring-2 ring-offline" /> chiusa, ancora fermo
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pt-0.5 pb-2">
         {aperte.length === 0 && <div className="px-2 py-6 text-center text-sm text-muted">Nessun veicolo sta chiedendo aiuto.</div>}
         <AnimatePresence initial={false}>
           {aperte.map((r) => {
@@ -632,10 +635,12 @@ function SchedaDalVivo({ onChiudi }: { onChiudi: () => void }) {
 
 /** Avviso in cima alla console quando il BOXi in sala perde il collegamento. */
 function AvvisoOffline({ onSeleziona }: { onSeleziona: (id: string) => void }) {
-  const { dalVivo: d } = useOra()
+  const { dalVivo: d, richieste } = useOra()
+  // quando la richiesta è presa l'operatore lo sa già: l'avviso sparisce
+  const presa = richieste.some((r) => r.veicolo_id === 'boxi_sala' && r.stato !== 'in_attesa')
   return (
     <AnimatePresence>
-      {d?.stato === 'offline' && (
+      {d?.stato === 'offline' && !presa && (
         <motion.button
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
