@@ -307,15 +307,21 @@ export function Mappa({ sc, selezionato, onSeleziona }: Props) {
       }
       const marcatore = new maplibregl.Marker({ element: elemento })
       let visto = false
+      let sullaMappa = false // il marcatore si aggiunge una volta sola: riaggiungerlo a ogni fotogramma rende impossibile cliccarlo
       const disegnaDalVivo = () => {
         const d = orologio.dalVivo()
         if (!d) {
-          marcatore.remove()
+          if (sullaMappa) marcatore.remove()
+          sullaMappa = false
           ;(m.getSource('dal-vivo') as GeoJSONSource).setData({ type: 'FeatureCollection', features: [] })
           return
         }
-        marcatore.setLngLat([d.lon, d.lat]).addTo(m)
-        elemento.dataset.stato = d.stato
+        marcatore.setLngLat([d.lon, d.lat])
+        if (!sullaMappa) {
+          marcatore.addTo(m)
+          sullaMappa = true
+        }
+        if (elemento.dataset.stato !== d.stato) elemento.dataset.stato = d.stato
         ;(m.getSource('dal-vivo') as GeoJSONSource).setData({
           type: 'FeatureCollection',
           features: [{ type: 'Feature', properties: { g: d.precisione_m, stato: d.stato }, geometry: { type: 'Point', coordinates: [d.lon, d.lat] } }],
