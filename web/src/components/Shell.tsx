@@ -101,6 +101,7 @@ function BarraAlta() {
       if (e.shiftKey && e.code === 'KeyG') orologio.paracadute('gps')
       if (e.shiftKey && e.code === 'KeyO') orologio.paracadute('offline')
       if (e.shiftKey && e.code === 'KeyN') orologio.paracadute('normale')
+      if (e.shiftKey && e.code === 'KeyB') orologio.nascondiBoxi() // Maiusc+B nasconde o rimostra il BOXi in sala
     }
     window.addEventListener('keydown', tasti)
     return () => window.removeEventListener('keydown', tasti)

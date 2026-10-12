@@ -90,6 +90,9 @@ let cause: string[] = []
 let chiusi: InterventoChiuso[] = []
 let registro: StatoRegistro | null = null
 let dalVivo: DalVivo | null = null
+let nascosto = false // Maiusc+B: il BOXi in sala sparisce da questa schermata (per un video senza telefono)
+let ultimoDalVivo: DalVivo | null = null
+let ultimeRichieste: RichiestaDiretta[] = []
 let ws: WebSocket | null = null
 let pubblicato = { t: INIZIO_DEMO, velocita, inCorsa, collegato, richieste, scenario, temporale, temporali, cause, chiusi, registro: registro as StatoRegistro | null, dalVivo: dalVivo as DalVivo | null }
 const ascoltatori = new Set<() => void>()
@@ -109,18 +112,24 @@ function ricevi(s: StatoServer) {
   velocita = s.velocita
   inCorsa = s.in_corsa
   ritardi = s.ritardi
-  richieste = s.richieste
-  fermi = new Map(s.richieste.map((r) => [r.veicolo_id, r.inizio_piano]))
+  ultimeRichieste = s.richieste
+  ultimoDalVivo = s.dal_vivo ?? null
+  filtraBoxi()
   temporali = s.temporali ?? ['previsto']
   cause = s.cause ?? []
   chiusi = s.chiusi ?? []
   registro = s.registro ?? null
-  dalVivo = s.dal_vivo ?? null
   if (s.scenario !== scenario || s.temporale !== temporale) {
     scenario = s.scenario
     temporale = s.temporale
     pubblica()
   }
+}
+
+function filtraBoxi() {
+  richieste = nascosto ? ultimeRichieste.filter((r) => r.veicolo_id !== 'boxi_sala') : ultimeRichieste
+  fermi = new Map(richieste.map((r) => [r.veicolo_id, r.inizio_piano]))
+  dalVivo = nascosto ? null : ultimoDalVivo
 }
 
 function collega() {
@@ -182,6 +191,12 @@ export const orologio = {
   /** Paracadute per il palco: forza GPS debole o offline sul BOXi in sala; 'normale' lo toglie. */
   paracadute: (valore: 'gps' | 'offline' | 'normale') => {
     if (ws && collegato) ws.send(JSON.stringify({ comando: 'paracadute', valore }))
+  },
+  /** Nasconde o rimostra il BOXi in sala, solo in questa schermata: il server continua a seguirlo. */
+  nascondiBoxi: () => {
+    nascosto = !nascosto
+    filtraBoxi()
+    pubblica()
   },
   /** Quale giornata vera: 'previsto' o 'prima' (il temporale arriva un'ora prima del previsto). */
   temporale: (quale: string) => comanda('temporale', quale),
